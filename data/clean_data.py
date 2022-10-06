@@ -17,10 +17,10 @@ def getDF(filename):
     df_main = pd.DataFrame(columns=['dt','x','y','z','xdot','ydot','zdot','f1','f2','f3'])
     #  'a1','a2','a3','a1dot','a2dot','a3dot','g1','g2','g3'])
     for i in range(0,len(filename)):
-        datafile = os.path.join(os.getcwd(),filename[i], "vrpn_client_node-darkoBox-pose.csv")
+        datafile = os.path.join(os.getcwd(), filename[i], "vrpn_client_node-darkoBox-pose.csv")
         df = pd.read_csv(datafile)
-        list=['Time','pose.position.x', 'pose.position.y', 'pose.position.z' ]
-        data=np.array([df[list[1]] ,df[list[2]],df[list[3]]])
+        list=['Time','pose.position.x', 'pose.position.y', 'pose.position.z']
+        data=np.array([df[list[1]], df[list[2]], df[list[3]]])
         timestamps= np.array([df[list[0]]])
         # print('shape of data initially',data.shape)
         # initpt=data[:,0]
@@ -30,7 +30,7 @@ def getDF(filename):
         inipt= np.array([1.07855344, 1.44855011, 0.96767521]).reshape(3,1)
         data= data-inipt
         # print('shape of modified data',data.shape)
-        diffdata, deltat=np.diff(data), np.diff(timestamps)
+        diffdata, deltat = np.diff(data), np.diff(timestamps)
         data_vel= diffdata/deltat
 
         data_vel = savgol_filter(data_vel, 21, 5)
