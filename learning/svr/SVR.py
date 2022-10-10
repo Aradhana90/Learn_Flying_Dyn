@@ -1,8 +1,8 @@
 from sklearn.svm import SVR
 from sklearn.model_selection import GridSearchCV
 import numpy as np
-from data.filter_and_diff import get_trajectory
 from eval.metrics import get_rmse
+from data.filter_and_diff import get_trajectory
 import time
 import matplotlib.pyplot as plt
 

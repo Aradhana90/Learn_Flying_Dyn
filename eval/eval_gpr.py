@@ -1,14 +1,14 @@
 from metrics import *
-from learning.svr.SVR import train_svr, pred_svr
+from learning.svr.GPR import train_gpr, pred_gpr
 from data.filter_and_diff import get_trajectory
 import matplotlib.pyplot as plt
 
 # Specify which trajectories to use
 which_object = 'white_box'
 run = 'med_dist'
-training_runs = np.array([1])
-# training_runs = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-test_nr = 1
+# training_runs = np.array([1])
+training_runs = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+test_nr = 15
 test_path = '../data/extracted/' + which_object + '/' + run + '/' + str(test_nr) + '.csv'
 
 if __name__ == "__main__":
@@ -26,13 +26,13 @@ if __name__ == "__main__":
     t_test, x_test, y_test = get_trajectory(test_path)
 
     # Train SVR models
-    svr_models = train_svr(x_train[3:], y_train)
+    gpr_models = train_gpr(x_train[3:], y_train)
 
     # Predict acceleration with trained SVR models
-    y_pred = pred_svr(x_test[3:], svr_models)
+    y_pred, _ = pred_gpr(x_test[3:], gpr_models)
 
     # Predict trajectory
-    _, x_int = integrate_trajectory(svr_models, x_test[:, 0], t_eval=t_test, estimator='svr')
+    _, x_int = integrate_trajectory(gpr_models, x_test[:, 0], t_eval=t_test, estimator='gpr')
 
     # Compute RMSE
     err = get_rmse(y_test, y_pred)
@@ -52,8 +52,8 @@ if __name__ == "__main__":
         axes[1, ii].legend(shadow=True, fancybox=True)
         axes[2, ii].legend(shadow=True, fancybox=True)
 
-#     figManager = plt.get_current_fig_manager()
-#     figManager.window.showMaximized()
+    # figManager = plt.get_current_fig_manager()
+    # figManager.window.showMaximized()
 
     # 3D plot of real and predicted trajectory
     fig = plt.figure()

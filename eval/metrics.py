@@ -21,33 +21,34 @@ def get_rmse(y, y_pred):
     return err
 
 
-def dx_dt_svr(t, x, svr, sys_dim=3):
+def dx_dt(t, x, model, sys_dim=3, estimator='svr'):
     """
-    :param t:       Time
-    :param x:       Current state
-    :param svr:     List of 1D svr models to predict the individual components of the acceleration
-    :param sys_dim: Dimension of the system (3 for position only, 6 or 7 for position + velocity)
-    :return:        Predicted linear (and angular) acceleration
+    :param t:           Time
+    :param x:           Current state
+    :param model:       List of 1D svr models or a GPR mode to predict the acceleration
+    :param sys_dim:     Dimension of the system (3 for position only, 6 or 7 for position + velocity)
+    :return:            Predicted linear (and angular) acceleration
     """
     dxi_dt = x[sys_dim:]
     ddxi_dt = np.zeros(sys_dim)
-    for ii in range(sys_dim):
-        ddxi_dt[ii] = svr[ii].predict(np.expand_dims(x[3:], axis=0))
+    if estimator == 'svr':
+        for ii in range(sys_dim):
+            ddxi_dt[ii] = model[ii].predict(np.expand_dims(x[3:], axis=0))
+    elif estimator == 'gpr':
+        ddxi_dt = model.predict(np.expand_dims(x[3:], axis=0)).reshape(-1)
 
     dx_dt = np.concatenate((dxi_dt, ddxi_dt))
     return dx_dt
 
 
-def integrate_trajectory(model, x_init, t_eval, sys_dim=3, which_model='svr'):
+def integrate_trajectory(model, x_init, t_eval, sys_dim=3, estimator='svr'):
     """
     :param model:       SVR or GP models to predict the linear and angular acceleration for the current state
     :param x_init:      Initial state from which to start the numerical integration
     :param t_eval:      Timesteps for which to store the integration results
-    :param which_model: Specifies what kind of predictor is used, 'SVR' or 'GP'
+    :param estimator:   Specifies what kind of predictor is used, 'SVR' or 'GP'
     :param sys_dim:     Dimension of the system (3 for position only, 6 or 7 for position + velocity)
     :return:            Final state after t_end seconds
     """
-    if which_model == 'svr':
-        sol = solve_ivp(dx_dt_svr, t_span=(0, t_eval[-1]), y0=x_init, t_eval=t_eval, args=(model, sys_dim))
-
+    sol = solve_ivp(dx_dt, t_span=(0, t_eval[-1]), y0=x_init, t_eval=t_eval, args=(model, sys_dim, estimator))
     return sol.t, sol.y
