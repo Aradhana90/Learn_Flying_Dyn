@@ -16,7 +16,7 @@ def get_rmse(y, y_pred):
 
     # Compute RMSE
     err = np.linalg.norm(y - y_pred, ord=2, axis=0)
-    err = err.sum() / len(err)
+    err = np.sqrt(err.sum() / len(err))
 
     return err
 
@@ -42,7 +42,7 @@ def dx_dt(t, x, model, sys_dim=3, estimator='svr'):
     return dx_dt
 
 
-def integrate_trajectory(model, x_init, t_eval, sys_dim=3, estimator='svr'):
+def integrate_trajectory(model, x_init, t_eval, only_pos=True, estimator='svr'):
     """
     :param model:       SVR or GP models to predict the linear and angular acceleration for the current state
     :param x_init:      Initial state from which to start the numerical integration
@@ -51,5 +51,9 @@ def integrate_trajectory(model, x_init, t_eval, sys_dim=3, estimator='svr'):
     :param sys_dim:     Dimension of the system (3 for position only, 6 or 7 for position + velocity)
     :return:            Final state after t_end seconds
     """
+    if only_pos:
+        sys_dim = 3
+    else:
+        sys_dim = 7
     sol = solve_ivp(dx_dt, t_span=(0, t_eval[-1]), y0=x_init, t_eval=t_eval, args=(model, sys_dim, estimator))
     return sol.t, sol.y

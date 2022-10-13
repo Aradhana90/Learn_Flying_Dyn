@@ -6,7 +6,7 @@ from scipy.signal import savgol_filter
 from scipy import interpolate
 
 # Specify input directory
-which_object = 'white_box'
+which_object = 'benchmark_box'
 run = 'med_dist'
 path = 'extracted/' + which_object + '/' + run + '/'
 
@@ -61,7 +61,7 @@ def get_trajectory(path_to_csv, delta_t=0.01, kernel_size=5, which_filter='mean'
     dxi = np.diff(xi) / delta_t
 
     # Filter velocity data
-    for ii in range(3):
+    for ii in range(D):
         if which_filter == 'mean':
             dxi[ii, :] = mean_filt(dxi[ii, :], kernel_size)
         elif which_filter == 'savgol':
@@ -71,7 +71,7 @@ def get_trajectory(path_to_csv, delta_t=0.01, kernel_size=5, which_filter='mean'
     ddxi = np.diff(dxi) / delta_t
 
     # Filter acceleration data
-    for ii in range(3):
+    for ii in range(D):
         if which_filter == 'mean':
             ddxi[ii, :] = mean_filt(ddxi[ii, :], kernel_size)
         elif which_filter == 'savgol':
@@ -95,26 +95,40 @@ def get_trajectory(path_to_csv, delta_t=0.01, kernel_size=5, which_filter='mean'
 
 
 if __name__ == "__main__":
+    only_pos = False
     # Read data
     idx = 0
-    fig, axes = plt.subplots(3, 3)
+    fig1, axes1 = plt.subplots(3, 3)
+    fig2, axes2 = plt.subplots(3, 4)
     for _ in range(18):
         path_to_file = path + str(_ + 1) + '.csv'
         # Compare filtering and differentiation approaches
-        t1, x1, ddxi1 = get_trajectory(path_to_file, which_filter='mean')
+        t1, x1, ddxi1 = get_trajectory(path_to_file, kernel_size=5, which_filter='mean', only_pos=only_pos)
         # t2, x2, ddxi2 = get_trajectory(path, which_filter='savgol')
 
         # Plot position, velocity and acceleration
         # fig, axes = plt.subplots(3, 3)
-        for kk in range(3):
-            axes[0, kk].plot(t1, x1[kk, :], color='r')
-            axes[1, kk].plot(t1, x1[kk + 3, :], color='g')
-            axes[2, kk].plot(t1, ddxi1[kk, :], color='b')
+        if only_pos:
+            for kk in range(3):
+                axes1[0, kk].plot(t1, x1[kk, :], color='r')
+                axes1[1, kk].plot(t1, x1[kk + 3, :], color='g')
+                axes1[2, kk].plot(t1, ddxi1[kk, :], color='b')
+
+        if not only_pos:
+            for kk in range(3):
+                axes1[0, kk].plot(t1, x1[kk, :], color='r')
+                axes1[1, kk].plot(t1, x1[kk + 7, :], color='g')
+                axes1[2, kk].plot(t1, ddxi1[kk, :], color='b')
+
+            for kk in range(3, 7):
+                axes2[0, kk - 3].plot(t1, x1[kk, :], color='r')
+                axes2[1, kk - 3].plot(t1, x1[kk + 7, :], color='g')
+                axes2[2, kk - 3].plot(t1, ddxi1[kk, :], color='b')
 
             # axes[0, kk].plot(t2, x2[kk, :], color='r', linestyle='--')
             # axes[1, kk].plot(t2, x2[kk + 3, :], color='g', linestyle='--')
             # axes[2, kk].plot(t2, ddxi2[kk, :], color='b', linestyle='--')
 
-    figManager = plt.get_current_fig_manager()
-    figManager.window.showMaximized()
+    # figManager = plt.get_current_fig_manager()
+    # figManager.window.showMaximized()
     plt.show()

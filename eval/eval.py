@@ -9,10 +9,11 @@ from learning.gpr.GPR import train_gpr, pred_gpr
 from learning.svr.SVR import train_svr, pred_svr
 
 # Which algorithm
-alg = 'svr'
+alg = 'gpr'
+only_pos = False
 
 # Specify which trajectories to use
-which_object = 'white_box'
+which_object = 'benchmark_box'
 run = 'med_dist'
 # training_runs = np.array([1])
 training_runs = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
@@ -22,38 +23,40 @@ test_runs = ([11, 12, 13, 14, 15, 16, 17, 18])
 if __name__ == "__main__":
     # Training data
     training_path = '../data/extracted/' + which_object + '/' + run + '/' + str(training_runs[0]) + '.csv'
-    _, x_train, y_train = get_trajectory(training_path)
+    _, x_train, y_train = get_trajectory(training_path, only_pos=only_pos)
     if len(training_runs) > 1:
         for ii in range(1, len(training_runs)):
             training_path = '../data/extracted/' + which_object + '/' + run + '/' + str(training_runs[ii]) + '.csv'
-            _, x_train_tmp, y_train_tmp = get_trajectory(training_path)
+            _, x_train_tmp, y_train_tmp = get_trajectory(training_path, only_pos=only_pos)
             x_train = np.concatenate((x_train, x_train_tmp), axis=1)
             y_train = np.concatenate((y_train, y_train_tmp), axis=1)
 
     # Test data
     test_path = '../data/extracted/' + which_object + '/' + run + '/' + str(test_runs[0]) + '.csv'
-    t_test, x_test, y_test = get_trajectory(test_path)
+    t_test, x_test, y_test = get_trajectory(test_path, only_pos=only_pos)
     if len(test_runs) > 1:
         for ii in range(1, len(test_runs)):
             test_path = '../data/extracted/' + which_object + '/' + run + '/' + str(test_runs[ii]) + '.csv'
-            _, x_test_tmp, y_test_tmp = get_trajectory(test_path)
+            _, x_test_tmp, y_test_tmp = get_trajectory(test_path, only_pos=only_pos)
             x_test = np.concatenate((x_test, x_test_tmp), axis=1)
             y_test = np.concatenate((y_test, y_test_tmp), axis=1)
 
     # Train models and predict acceleration
     if alg == 'svr':
-        models = train_svr(x_train[3:], y_train)
+        models = train_svr(x_train[3:], y_train, only_pos=only_pos)
         y_pred = pred_svr(x_test[3:], models)
     elif alg == 'gpr':
         models = train_gpr(x_train[3:], y_train, kernel=RBF() + WhiteKernel())
         y_pred, _ = pred_gpr(x_test[3:], models)
 
     # Predict first trajectory in the test set
-    _, x_int = integrate_trajectory(models, x_test[:, 0], t_eval=t_test, estimator=alg)
+    _, x_int = integrate_trajectory(models, x_test[:, 0], t_eval=t_test, estimator=alg, only_pos=only_pos)
 
     # Compute RMSE
-    rmse = get_rmse(y_test, y_pred)
-    print(f"RMSE is {rmse:.3f}")
+    rmse_pos = get_rmse(y_test[0:3], y_pred[0:3])
+    rmse_ori = get_rmse(y_test[3:7], y_pred[3:7])
+    print(f"RMSE in position is {rmse_pos:.3f}")
+    print(f"RMSE in orientation is {rmse_ori:.3f}")
 
     # Compute deviation of predicted and real endpoint
     dist = la.norm(x_test[0:3, len(t_test) - 1] - x_int[0:3, -1])
@@ -74,8 +77,20 @@ if __name__ == "__main__":
         axes[1, ii].legend(shadow=True, fancybox=True)
         axes[2, ii].legend(shadow=True, fancybox=True)
 
-    # figManager = plt.get_current_fig_manager()
-    # figManager.window.showMaximized()
+    # Plot real and predicted quaternion, their first and second derivatives
+    fig, axes = plt.subplots(3, 4)
+    for ii in range(3, 7):
+        axes[0, ii - 3].plot(t_test, x_test[ii, :len(t_test)], color='b', label='$\\xi_' + str(ii) + '$')
+        axes[0, ii - 3].plot(t_test, x_int[ii, :], color='r', label='$\\hat{\\xi}_' + str(ii) + '$')
+        axes[1, ii - 3].plot(t_test, x_test[ii + 3, :len(t_test)], color='b', label='$\\dot{\\xi}_' + str(ii) + '$')
+        axes[1, ii - 3].plot(t_test, x_int[ii + 3, :], color='r',
+                             label='$\\dot{\\hat{\\xi}}_' + str(ii) + '$')
+        axes[2, ii - 3].plot(t_test, y_test[ii, :len(t_test)], color='b', label='$\\ddot{\\xi}_' + str(ii) + '$')
+        axes[2, ii - 3].plot(t_test, y_pred[ii, :len(t_test)], color='r', label='$\\ddot{\\hat{\\xi}}_' + str(ii) + '$')
+
+        axes[0, ii - 3].legend(shadow=True, fancybox=True)
+        axes[1, ii - 3].legend(shadow=True, fancybox=True)
+        axes[2, ii - 3].legend(shadow=True, fancybox=True)
 
     # 3D plot of real and predicted trajectory
     fig = plt.figure()
