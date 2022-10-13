@@ -1,10 +1,11 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import time
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, WhiteKernel
 from data.filter_and_diff import get_trajectory
-from eval.metrics import get_rmse
-import numpy as np
-import time
-import matplotlib.pyplot as plt
+
+# from eval.metrics import get_rmse
 
 # Specify which trajectories to use
 which_object = 'benchmark_box'
@@ -21,7 +22,7 @@ def train_gpr(x, y, kernel=RBF()):
         x: Training samples of shape (n_features, n_samples)
         y: Training targets of shape (n_targets, n_samples)
     """
-    gpr = GaussianProcessRegressor()
+    gpr = GaussianProcessRegressor(normalize_y=True, n_restarts_optimizer=5, kernel=kernel)
     gpr.fit(x.T, y.T)
     return gpr
 
@@ -52,8 +53,8 @@ if __name__ == "__main__":
     y_pred, sigma_pred = pred_gpr(x_test[3:], gpr_model)
 
     # Compute RMSE
-    err = get_rmse(y_test, y_pred)
-    print(f"RMSE: {err:.3f}")
+    # err = get_rmse(y_test, y_pred)
+    # print(f"RMSE: {err:.3f}")
 
     # Plot real and predicted targets
     fig, axes = plt.subplots(3, 3)

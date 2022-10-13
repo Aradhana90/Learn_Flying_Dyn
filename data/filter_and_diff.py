@@ -18,10 +18,27 @@ def mean_filt(data, kernel_size=5):
     return data
 
 
-def get_trajectory(path_to_csv, delta_t=0.01, kernel_size=5, which_filter='mean'):
+def ang_vel(quat):
+    """
+    :param quat:    Matrix of quaternions of shape (4, n_samples)
+    :return:        Matrix of angular velocities of shape (3, n_samples)
+    """
+    n_samples = quat.shape[1]
+    # for ii in range(n_samples):
+
+
+def get_trajectory(path_to_csv, delta_t=0.01, kernel_size=5, which_filter='mean', only_pos=True):
     df = pd.read_csv(path_to_csv)
-    tmp = ['Time', 'pose.position.x', 'pose.position.y', 'pose.position.z', 'pose.orientation.x']
-    xi = np.array([df[tmp[1]], df[tmp[2]], df[tmp[3]]])
+    if only_pos:
+        D = 3
+        tmp = ['Time', 'pose.position.x', 'pose.position.y', 'pose.position.z', 'pose.orientation.x',
+               'pose.orientation.y', 'pose.orientation.z', 'pose.orientation.w']
+        xi = np.array([df[tmp[1]], df[tmp[2]], df[tmp[3]]])
+    else:
+        D = 7
+        tmp = ['Time', 'pose.position.x', 'pose.position.y', 'pose.position.z', 'pose.orientation.x',
+               'pose.orientation.y', 'pose.orientation.z', 'pose.orientation.w']
+        xi = np.array([df[tmp[1]], df[tmp[2]], df[tmp[3]], df[tmp[4]], df[tmp[5]], df[tmp[6]], df[tmp[7]]])
     # t = np.array([df[tmp[0]]])       # Timestamps sometimes do not match pose data
 
     # Clip data
@@ -31,7 +48,7 @@ def get_trajectory(path_to_csv, delta_t=0.01, kernel_size=5, which_filter='mean'
     t = np.linspace(0, (end_idx - start_idx - 1) * delta_t, end_idx - start_idx)
 
     # Start at t=0, p = 0
-    xi = xi - xi[:, 0].reshape(3, 1)
+    # xi = xi - xi[:, 0].reshape(3, 1)
 
     # Filter position data
     for ii in range(3):
@@ -40,7 +57,7 @@ def get_trajectory(path_to_csv, delta_t=0.01, kernel_size=5, which_filter='mean'
         elif which_filter == 'savgol':
             xi[ii, :] = savgol_filter(xi[ii, :], kernel_size, 3, mode='nearest')
 
-    # Differentiate position data
+    # Compute linear (and angular) velocity by numerical differentiation
     dxi = np.diff(xi) / delta_t
 
     # Filter velocity data

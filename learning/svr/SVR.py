@@ -1,10 +1,10 @@
-from sklearn.svm import SVR
-from sklearn.model_selection import GridSearchCV
 import numpy as np
-from eval.metrics import get_rmse
-from data.filter_and_diff import get_trajectory
 import time
 import matplotlib.pyplot as plt
+from sklearn.svm import SVR
+from sklearn.model_selection import GridSearchCV
+# from eval.metrics import get_rmse, integrate_trajectory
+from data.filter_and_diff import get_trajectory
 
 # Specify which trajectories to use
 which_object = 'benchmark_box'
@@ -71,8 +71,8 @@ if __name__ == "__main__":
     y_pred = pred_svr(x_test[3:], svr_models)
 
     # Compute RMSE
-    err = get_rmse(y_test, y_pred)
-    print(f"RMSE: {err:.3f}")
+    # err = get_rmse(y_test, y_pred)
+    # print(f"RMSE: {err:.3f}")
 
     # Plot real and predicted targets
     fig, axes = plt.subplots(3, 3)

@@ -27,6 +27,7 @@ def dx_dt(t, x, model, sys_dim=3, estimator='svr'):
     :param x:           Current state
     :param model:       List of 1D svr models or a GPR mode to predict the acceleration
     :param sys_dim:     Dimension of the system (3 for position only, 6 or 7 for position + velocity)
+    :param estimator:   Specifies the type of the the learned model ('svr' or 'gpr')
     :return:            Predicted linear (and angular) acceleration
     """
     dxi_dt = x[sys_dim:]

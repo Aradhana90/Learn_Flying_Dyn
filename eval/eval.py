@@ -1,11 +1,15 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import numpy.linalg as la
-
-from learning.gpr.GPR import train_gpr, pred_gpr
 from sklearn.gaussian_process.kernels import RBF, WhiteKernel
+
 from data.filter_and_diff import get_trajectory
 from metrics import get_rmse, integrate_trajectory
+from learning.gpr.GPR import train_gpr, pred_gpr
+from learning.svr.SVR import train_svr, pred_svr
+
+# Which algorithm
+alg = 'svr'
 
 # Specify which trajectories to use
 which_object = 'white_box'
@@ -13,6 +17,7 @@ run = 'med_dist'
 # training_runs = np.array([1])
 training_runs = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 test_runs = ([11, 12, 13, 14, 15, 16, 17, 18])
+# test_runs = ([17])
 
 if __name__ == "__main__":
     # Training data
@@ -35,14 +40,16 @@ if __name__ == "__main__":
             x_test = np.concatenate((x_test, x_test_tmp), axis=1)
             y_test = np.concatenate((y_test, y_test_tmp), axis=1)
 
-    # Train GPR models
-    gpr_models = train_gpr(x_train[3:], y_train, kernel=RBF() + WhiteKernel())
-
-    # Predict acceleration with trained SVR models
-    y_pred, _ = pred_gpr(x_test[3:], gpr_models)
+    # Train models and predict acceleration
+    if alg == 'svr':
+        models = train_svr(x_train[3:], y_train)
+        y_pred = pred_svr(x_test[3:], models)
+    elif alg == 'gpr':
+        models = train_gpr(x_train[3:], y_train, kernel=RBF() + WhiteKernel())
+        y_pred, _ = pred_gpr(x_test[3:], models)
 
     # Predict first trajectory in the test set
-    _, x_int = integrate_trajectory(gpr_models, x_test[:, 0], t_eval=t_test, estimator='gpr')
+    _, x_int = integrate_trajectory(models, x_test[:, 0], t_eval=t_test, estimator=alg)
 
     # Compute RMSE
     rmse = get_rmse(y_test, y_pred)
@@ -76,5 +83,9 @@ if __name__ == "__main__":
     ax.scatter(x_test[0, :len(t_test)], x_test[1, :len(t_test)], x_test[2, :len(t_test)], color='b',
                label='$\\mathbf{\\xi}}$')
     ax.scatter(x_int[0, :], x_int[1, :], x_int[2, :], color='r', label='$\\mathbf{\\hat{\\xi}}}$')
+    ax.set_xlabel('$\\xi_1$')
+    ax.set_ylabel('$\\xi_2$')
+    ax.set_zlabel('$\\xi_3$')
+    ax.set_title('Predicted and real flying trajectories')
     ax.legend(shadow=True, fancybox=True)
     plt.show()
