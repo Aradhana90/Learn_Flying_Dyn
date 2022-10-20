@@ -15,7 +15,7 @@ training_path = '../../data/extracted/' + which_object + '/' + run + '/' + str(t
 test_path = '../../data/extracted/' + which_object + '/' + run + '/' + str(test_nr) + '.csv'
 
 
-def train_svr(x, y, kernel='rbf', only_pos=3):
+def train_svr(x, y, kernel='rbf'):
     """
         Train multiple 1D SVR models
         Input:  x: Input data       shape: (in_dim, n_data_points)
@@ -34,12 +34,7 @@ def train_svr(x, y, kernel='rbf', only_pos=3):
         svr.append(svr_model)
 
     # Fit SVR models
-    if only_pos:
-        D = 3
-    else:
-        D = 7
-
-    for ii in range(D):
+    for ii in range(out_dim):
         t0 = time.time()
         svr[ii].fit(x[:].T, y[ii, :])
         svr_fit = time.time() - t0

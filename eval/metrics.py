@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.integrate import solve_ivp
+from data.filter_and_diff import quatmul
 
 
 def get_rmse(y, y_pred):
@@ -21,7 +22,7 @@ def get_rmse(y, y_pred):
     return err
 
 
-def dx_dt(t, x, model, sys_dim=3, estimator='svr'):
+def dx_dt(t, x, model, only_pos=True, ang_vel=False, estimator='svr'):
     """
     :param t:           Time
     :param x:           Current state
@@ -30,19 +31,39 @@ def dx_dt(t, x, model, sys_dim=3, estimator='svr'):
     :param estimator:   Specifies the type of the the learned model ('svr' or 'gpr')
     :return:            Predicted linear (and angular) acceleration
     """
-    dxi_dt = x[sys_dim:]
-    ddxi_dt = np.zeros(sys_dim)
-    if estimator == 'svr':
-        for ii in range(sys_dim):
-            ddxi_dt[ii] = model[ii].predict(np.expand_dims(x[3:], axis=0))
-    elif estimator == 'gpr':
-        ddxi_dt = model.predict(np.expand_dims(x[3:], axis=0)).reshape(-1)
+    if not ang_vel or only_pos:
+        if only_pos:
+            sys_dim = 3
+        else:
+            sys_dim = 7
+
+        dxi_dt = x[sys_dim:]
+        ddxi_dt = np.zeros(sys_dim)
+        if estimator == 'svr':
+            for ii in range(sys_dim):
+                ddxi_dt[ii] = model[ii].predict(np.expand_dims(x[3:], axis=0))
+        elif estimator == 'gpr':
+            ddxi_dt = model.predict(np.expand_dims(x[3:], axis=0)).reshape(-1)
+
+    else:
+        q = x[3:7]
+        v = x[7:10]
+        omega = x[10:13]
+        dxi_dt = np.zeros(7)
+        dxi_dt[0:3] = v
+        dxi_dt[3:7] = 0.5 * quatmul(np.append([0], omega), q)
+        ddxi_dt = np.zeros(6)
+        if estimator == 'svr':
+            for ii in range(6):
+                ddxi_dt[ii] = model[ii].predict(np.expand_dims(x[3:], axis=0))
+        elif estimator == 'gpr':
+            ddxi_dt = model.predict(np.expand_dims(x[3:], axis=0)).reshape(-1)
 
     dx_dt = np.concatenate((dxi_dt, ddxi_dt))
     return dx_dt
 
 
-def integrate_trajectory(model, x_init, t_eval, only_pos=True, estimator='svr'):
+def integrate_trajectory(model, x_init, t_eval, only_pos=True, ang_vel=False, estimator='svr'):
     """
     :param model:       SVR or GP models to predict the linear and angular acceleration for the current state
     :param x_init:      Initial state from which to start the numerical integration
@@ -55,5 +76,5 @@ def integrate_trajectory(model, x_init, t_eval, only_pos=True, estimator='svr'):
         sys_dim = 3
     else:
         sys_dim = 7
-    sol = solve_ivp(dx_dt, t_span=(0, t_eval[-1]), y0=x_init, t_eval=t_eval, args=(model, sys_dim, estimator))
+    sol = solve_ivp(dx_dt, t_span=(0, t_eval[-1]), y0=x_init, t_eval=t_eval, args=(model, only_pos, ang_vel, estimator))
     return sol.t, sol.y
