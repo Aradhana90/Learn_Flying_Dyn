@@ -22,8 +22,9 @@ def train_gpr(x, y, kernel=RBF()):
         x: Training samples of shape (n_features, n_samples)
         y: Training targets of shape (n_targets, n_samples)
     """
-    gpr = GaussianProcessRegressor(normalize_y=True, n_restarts_optimizer=5, kernel=kernel)
+    gpr = GaussianProcessRegressor(normalize_y=True, n_restarts_optimizer=9, kernel=kernel)
     gpr.fit(x.T, y.T)
+    print("GP kernel is: ", gpr.kernel_)
     return gpr
 
 
