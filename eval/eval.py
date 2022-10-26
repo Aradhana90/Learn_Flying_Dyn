@@ -12,19 +12,21 @@ from learning.svr.SVR import train_svr, pred_svr
 
 # Specify algorithm and system model
 alg = 'gpr'
-only_pos = False
+only_pos = True
 ang_vel = True
+sys_rep = 'cont'
+aug_factor = 5
 
 # Specify which trajectories to use for training and testing
 train_object = 'benchmark_box'
 train_run = 'med_dist'
 training_dir = '../data/extracted/' + train_object + '/' + train_run
-training_runs = np.arange(4, 20)
+training_runs = np.arange(19, 20)
 
 test_object = 'benchmark_box'
 test_run = 'med_dist'
 test_dir = '../data/extracted/' + test_object + '/' + test_run
-test_runs = [2, 1, 3]
+test_runs = np.arange(1, 10)
 # test_runs = ([17])
 
 filter_size = 5
@@ -32,7 +34,7 @@ filter_size = 5
 if __name__ == "__main__":
     # Training data
     x_train, y_train, _, _ = get_trajectories(training_dir, filter_size=filter_size, runs=training_runs,
-                                              only_pos=only_pos, ang_vel=ang_vel)
+                                              only_pos=only_pos, ang_vel=ang_vel, aug_factor=aug_factor)
 
     # Test data: One trajectory for whole prediction
     traj1_path = training_dir + '/' + str(test_runs[0]) + '.csv'
@@ -40,12 +42,13 @@ if __name__ == "__main__":
     x_test, y_test, eul_test, T_test = get_trajectories(test_dir, filter_size=filter_size, runs=test_runs,
                                                         only_pos=only_pos, ang_vel=ang_vel)
 
+    print('Created training and test data.')
     # Train models and predict acceleration
     if alg == 'svr':
         models = train_svr(x_train[3:], y_train)
         y_pred = pred_svr(x_test[3:], models)
     elif alg == 'gpr':
-        models = train_gpr(x_train[3:], y_train, kernel=RBF() + WhiteKernel())
+        models = train_gpr(x_train[3:], y_train, kernel=RBF() + Matern() + WhiteKernel())
         y_pred, _ = pred_gpr(x_test[3:], models)
     else:
         sys.exit('Select either gpr or svr model')
@@ -56,7 +59,7 @@ if __name__ == "__main__":
 
     # Compute RMSE
     rmse_pos = get_rmse(y_test[0:3], y_pred[0:3])
-    print(f"RMSE in linear acceleration in  m/s^2 is {rmse_pos:.3f}.")
+    print(f"RMSE in linear acceleration in m/s^2 is {rmse_pos:.3f}.")
     if not only_pos:
         rmse_ori = get_rmse(y_test[3:6], y_pred[3:6])
         print(f"RMSE in angular acceleration in  rad/s^2 is {rmse_ori:.3f}.")

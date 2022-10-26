@@ -108,8 +108,14 @@ def integrate_trajectory(model, x_init, t_eval, only_pos=True, ang_vel=False, es
         sys_dim = 3
     else:
         sys_dim = 7
+
     sol = solve_ivp(dx_dt, t_span=(0, t_eval[-1]), y0=x_init, t_eval=t_eval, args=(model, only_pos, ang_vel, estimator))
-    eul = quat2eul(sol.y[3:7])
+
+    if not only_pos:
+        eul = quat2eul(sol.y[3:7])
+    else:
+        eul = []
+
     return sol.t, sol.y, eul
 
 
@@ -134,6 +140,7 @@ def integrate_trajectories(model, x_test, T_vec, only_pos=True, ang_vel=False, e
         _, X_tmp, Eul_tmp = integrate_trajectory(model=model, x_init=x_init, t_eval=t_eval, only_pos=only_pos,
                                                  ang_vel=ang_vel, estimator=estimator)
         X_int = np.concatenate((X_int, X_tmp), axis=1)
-        Eul_int = np.concatenate((Eul_int, Eul_tmp), axis=1)
+        if not only_pos:
+            Eul_int = np.concatenate((Eul_int, Eul_tmp), axis=1)
 
     return X_int, Eul_int

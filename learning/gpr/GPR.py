@@ -16,13 +16,13 @@ training_path = '../../data/extracted/' + which_object + '/' + run + '/' + str(t
 test_path = '../../data/extracted/' + which_object + '/' + run + '/' + str(test_nr) + '.csv'
 
 
-def train_gpr(x, y, kernel=RBF()):
+def train_gpr(x, y, kernel=RBF(), sys_rep='cont'):
     """
         Train a GPR model
         x: Training samples of shape (n_features, n_samples)
         y: Training targets of shape (n_targets, n_samples)
     """
-    gpr = GaussianProcessRegressor(normalize_y=True, n_restarts_optimizer=9, kernel=kernel)
+    gpr = GaussianProcessRegressor(normalize_y=True, n_restarts_optimizer=4, kernel=kernel)
     gpr.fit(x.T, y.T)
     print("GP kernel is: ", gpr.kernel_)
     return gpr

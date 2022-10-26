@@ -3,14 +3,8 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
-from .mechanics import get_ang_vel, quat2eul
+from .mechanics import get_ang_vel, quat2eul, rotate_trajectory
 from scipy import interpolate
-
-# Specify input directory
-which_object = 'benchmark_box'
-run = 'med_dist'
-path = 'extracted/' + which_object + '/' + run + '/'
-pos_only = False
 
 
 def mean_filt(data, filter_size=5):
@@ -99,7 +93,8 @@ def get_trajectory(path_to_csv, delta_t=0.01, filter_size=5, which_filter='mean'
     return t, x, ddxi
 
 
-def get_trajectories(path_to_dir, runs, delta_t=0.01, filter_size=5, which_filter='mean', only_pos=True, ang_vel=False):
+def get_trajectories(path_to_dir, runs, delta_t=0.01, filter_size=5, which_filter='mean', only_pos=True, ang_vel=False,
+                     aug_factor=0):
     """
     :param path_to_dir:
     :param runs:
@@ -108,52 +103,89 @@ def get_trajectories(path_to_dir, runs, delta_t=0.01, filter_size=5, which_filte
     :param which_filter:
     :param only_pos:
     :param ang_vel:
+    :param aug_factor:
     :return:                Filtered trajectories
     """
     # Number of trajectories to return
     N_tilde = len(runs)
 
-    T_n = np.zeros(N_tilde)
+    T_n = np.zeros(N_tilde * (aug_factor + 1))
 
     # Initialize X and Y
     path_to_file = path_to_dir + '/' + str(runs[0]) + '.csv'
     _, X, Y = get_trajectory(path_to_file, delta_t=delta_t, filter_size=filter_size,
                              which_filter=which_filter, only_pos=only_pos, ang_vel=ang_vel)
     T_n[0] = X.shape[1]
+    for ii in range(aug_factor):
+        X_aug, Y_aug = rotate_trajectory(X, Y)
+        X = np.concatenate((X, X_aug), axis=1)
+        Y = np.concatenate((Y, Y_aug), axis=1)
+        T_n[1 + ii] = X_aug.shape[1]
+
     for ii in range(1, N_tilde):
         training_path = path_to_dir + '/' + str(runs[ii]) + '.csv'
         _, X_tmp, Y_tmp = get_trajectory(training_path, delta_t=delta_t, filter_size=filter_size,
                                          which_filter=which_filter, only_pos=only_pos, ang_vel=ang_vel)
         X = np.concatenate((X, X_tmp), axis=1)
         Y = np.concatenate((Y, Y_tmp), axis=1)
-        T_n[ii] = X_tmp.shape[1]
+        T_n[ii * (aug_factor + 1)] = X_tmp.shape[1]
+
+        # Data augmentation
+        for jj in range(aug_factor):
+            X_aug, Y_aug = rotate_trajectory(X_tmp, Y_tmp)
+            X = np.concatenate((X, X_aug), axis=1)
+            Y = np.concatenate((Y, Y_aug), axis=1)
+            T_n[ii * (aug_factor + 1) + jj] = X_aug.shape[1]
 
     # Also return euler angles for evaluation purpose
-    eul = quat2eul(X[3:7])
+    if not only_pos:
+        eul = quat2eul(X[3:7])
+    else:
+        eul = []
     return X, Y, eul, T_n.astype(int)
 
 
 if __name__ == "__main__":
+    # Specify input directory
+    which_object = 'benchmark_box'
+    run = 'med_dist'
+    path = 'extracted/' + which_object + '/' + run + '/'
+    pos_only = True
+
     # Read data
     idx = 0
     fig1, axes1 = plt.subplots(3, 3)
     fig1.suptitle('$\mathbf{p}, \mathbf{v}=\mathbf{\dot{p}}, \mathbf{a}=\mathbf{\ddot{p}}$')
-    fig2, axes2 = plt.subplots(3, 4)
+    if not pos_only:
+        fig2, axes2 = plt.subplots(3, 4)
     comp_ang_vel = True
     for _ in range(10, 11):
         path_tmp = path + str(_ + 1) + '.csv'
         # Compare filtering and differentiation approaches
         t1, x1, ddxi1 = get_trajectory(path_tmp, filter_size=5, which_filter='mean', only_pos=pos_only,
                                        ang_vel=comp_ang_vel)
+        x2, ddxi2 = rotate_trajectory(x1, ddxi1)
         # t2, x2, ddxi2 = get_trajectory(path, which_filter='savgol')
 
+        fig = plt.figure()
+        ax = plt.axes(projection='3d')
+        ax.plot3D(x1[0], x1[1], x1[2], color='r')
+        ax.plot3D(x2[0], x2[1], x2[2], color='b')
+        ax.set_xlabel('$o_1$')
+        ax.set_ylabel('$o_2$')
+        ax.set_zlabel('$o_3$')
+        ax.set_xlim([-1, 1])
+        ax.set_ylim([-1, 1])
         # Plot position, velocity and acceleration
         # fig, axes = plt.subplots(3, 3)
         if pos_only:
             for kk in range(3):
-                axes1[0, kk].plot(t1, x1[kk, :], color='r')
-                axes1[1, kk].plot(t1, x1[kk + 3, :], color='g')
-                axes1[2, kk].plot(t1, ddxi1[kk, :], color='b')
+                axes1[0, kk].plot(t1, x1[kk, :], 'r')
+                axes1[1, kk].plot(t1, x1[kk + 3, :], 'g')
+                axes1[2, kk].plot(t1, ddxi1[kk, :], 'b')
+                axes1[0, kk].plot(t1, x2[kk, :], 'r--')
+                axes1[1, kk].plot(t1, x2[kk + 3, :], 'g--')
+                axes1[2, kk].plot(t1, ddxi2[kk, :], 'b--')
 
         if not pos_only:
             for kk in range(3):
