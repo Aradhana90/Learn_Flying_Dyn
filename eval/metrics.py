@@ -53,12 +53,11 @@ def eul_norm(eul1, eul2):
     return err
 
 
-def dx_dt(t, x, model, only_pos=True, ang_vel=False, estimator='svr'):
+def dx_dt(t, x, model, only_pos=True, ang_vel=False, estimator='svr', prior=False):
     """
     :param t:           Time
     :param x:           Current state
     :param model:       List of 1D svr models or a GPR mode to predict the acceleration
-    :param sys_dim:     Dimension of the system (3 for position only, 6 or 7 for position + velocity)
     :param estimator:   Specifies the type of the the learned model ('svr' or 'gpr')
     :return:            Predicted linear (and angular) acceleration
     """
@@ -70,11 +69,8 @@ def dx_dt(t, x, model, only_pos=True, ang_vel=False, estimator='svr'):
 
         dxi_dt = x[sys_dim:]
         ddxi_dt = np.zeros(sys_dim)
-        if estimator == 'svr':
-            for ii in range(sys_dim):
-                ddxi_dt[ii] = model[ii].predict(np.expand_dims(x[3:], axis=0))
-        elif estimator == 'gpr':
-            ddxi_dt = model.predict(np.expand_dims(x[3:], axis=0)).reshape(-1)
+        for ii in range(sys_dim):
+            ddxi_dt[ii] = model[ii].predict(np.expand_dims(x[3:], axis=0))
 
     else:
         q = x[3:7]
@@ -84,11 +80,12 @@ def dx_dt(t, x, model, only_pos=True, ang_vel=False, estimator='svr'):
         dxi_dt[0:3] = v
         dxi_dt[3:7] = 0.5 * quatmul(np.append([0], omega), q)
         ddxi_dt = np.zeros(6)
-        if estimator == 'svr':
-            for ii in range(6):
-                ddxi_dt[ii] = model[ii].predict(np.expand_dims(x[3:], axis=0))
-        elif estimator == 'gpr':
-            ddxi_dt = model.predict(np.expand_dims(x[3:], axis=0)).reshape(-1)
+        for ii in range(6):
+            ddxi_dt[ii] = model[ii].predict(np.expand_dims(x[3:], axis=0))
+
+    # Check if prior mean function has been specified
+    if estimator == 'gpr' and prior is True:
+        ddxi_dt[2] -= 9.81
 
     dx_dt = np.concatenate((dxi_dt, ddxi_dt))
     return dx_dt
@@ -143,4 +140,18 @@ def integrate_trajectories(model, x_test, T_vec, only_pos=True, ang_vel=False, e
         if not only_pos:
             Eul_int = np.concatenate((Eul_int, Eul_tmp), axis=1)
 
+    return X_int, Eul_int
+
+
+def integrate_trajectories_disc(predictor, x_test, T_vec):
+    N_tilde = len(T_vec)
+    X_int = np.empty(x_test.shape[0], np.sum(T_vec))
+    for n in range(1, N_tilde):
+        x_init = x_test[:, np.sum(T_vec[:n])]
+        X_tmp = np.empty(len(x_init), T_vec[n])
+        for ii in range(T_vec[n] - 1):
+            X_tmp[ii + 1] = predictor.predict(X_int[:, ii])
+        X_int = np.concatenate((X_int, X_tmp), axis=1)
+
+    Eul_int = quat2eul(X_int[3:7])
     return X_int, Eul_int

@@ -16,26 +16,51 @@ training_path = '../../data/extracted/' + which_object + '/' + run + '/' + str(t
 test_path = '../../data/extracted/' + which_object + '/' + run + '/' + str(test_nr) + '.csv'
 
 
-def train_gpr(x, y, kernel=RBF(), sys_rep='cont'):
+def train_gpr(x, y, kernel=RBF(), prior=True):
     """
         Train a GPR model
         x: Training samples of shape (n_features, n_samples)
         y: Training targets of shape (n_targets, n_samples)
     """
-    gpr = GaussianProcessRegressor(normalize_y=True, n_restarts_optimizer=4, kernel=kernel)
-    gpr.fit(x.T, y.T)
-    print("GP kernel is: ", gpr.kernel_)
+    # Get output dimension
+    out_dim = y.shape[0]
+
+    # Subtract prior mean from z-acceleration, i.e., \mu(o_z) = -9.81
+    if prior:
+        y[2] += 9.81  # continuous-time case
+
+    # Create GPR models
+    gpr = []
+    for ii in range(out_dim):
+        gpr_model = GaussianProcessRegressor(normalize_y=True, n_restarts_optimizer=4, kernel=kernel)
+        gpr.append(gpr_model)
+        t0 = time.time()
+        gpr[ii].fit(x.T, y[ii].T)
+        gpr_fit = time.time() - t0
+        print(f"GP model {ii} fitted in {gpr_fit:.2f} seconds, kernel is: {gpr[ii].kernel_}")
+
     return gpr
 
 
-def pred_gpr(x, gpr):
+def pred_gpr(x, gpr, prior=True):
     """
         Predict with a GPR model
         x:      Test data of shape (n_features, n_samples)
         return: Predicted targets of shape (n_targets, n_samples)
     """
-    y_pred, sigma_pred = gpr.predict(x.T, return_std=True)
-    y_pred = y_pred.T
+    if isinstance(gpr, list):
+        out_dim = len(gpr)
+        n_samples = x.shape[1]
+        y_pred, sigma_pred = np.empty((out_dim, n_samples)), np.empty((out_dim, n_samples))
+        for ii in range(out_dim):
+            y_pred[ii, :], sigma_pred[ii, :] = gpr[ii].predict(x.T, return_std=True)
+    else:
+        y_pred, sigma_pred = gpr.predict(x.T, return_std=True)
+
+    # If prior mean has been specified, add back
+    # if prior:
+    # y_pred[2] -= 9.81  # continuous-time case
+
     return y_pred, sigma_pred
 
 
@@ -48,10 +73,10 @@ if __name__ == "__main__":
 
     # Train GPR model
     gpr_kernel = RBF()
-    gpr_model = train_gpr(x_train[3:], y_train, gpr_kernel)
+    gpr_models = train_gpr(x_train[3:], y_train, gpr_kernel)
 
     # Predict with trained SVR models
-    y_pred, sigma_pred = pred_gpr(x_test[3:], gpr_model)
+    y_pred, sigma_pred = pred_gpr(x_test[3:], gpr_models)
 
     # Compute RMSE
     # err = get_rmse(y_test, y_pred)

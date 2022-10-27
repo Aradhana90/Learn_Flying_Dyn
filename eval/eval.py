@@ -2,7 +2,7 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.linalg as la
-from sklearn.gaussian_process.kernels import RBF, WhiteKernel, Matern
+from sklearn.gaussian_process.kernels import RBF, WhiteKernel, Matern, ConstantKernel
 
 from data.filter_and_diff import get_trajectory, get_trajectories
 from data.mechanics import quat2eul
@@ -12,21 +12,23 @@ from learning.svr.SVR import train_svr, pred_svr
 
 # Specify algorithm and system model
 alg = 'gpr'
-only_pos = True
+gpr_kernel = RBF() + Matern() + WhiteKernel()
+only_pos = False
 ang_vel = True
 sys_rep = 'cont'
-aug_factor = 5
+aug_factor = 0
+prior = False
 
 # Specify which trajectories to use for training and testing
 train_object = 'benchmark_box'
 train_run = 'med_dist'
 training_dir = '../data/extracted/' + train_object + '/' + train_run
-training_runs = np.arange(19, 20)
+training_runs = np.arange(1, 11)
 
 test_object = 'benchmark_box'
 test_run = 'med_dist'
 test_dir = '../data/extracted/' + test_object + '/' + test_run
-test_runs = np.arange(1, 10)
+test_runs = np.arange(11, 20)
 # test_runs = ([17])
 
 filter_size = 5
@@ -48,12 +50,12 @@ if __name__ == "__main__":
         models = train_svr(x_train[3:], y_train)
         y_pred = pred_svr(x_test[3:], models)
     elif alg == 'gpr':
-        models = train_gpr(x_train[3:], y_train, kernel=RBF() + Matern() + WhiteKernel())
-        y_pred, _ = pred_gpr(x_test[3:], models)
+        models = train_gpr(x_train[3:], y_train, kernel=gpr_kernel, prior=prior)
+        y_pred, _ = pred_gpr(x_test[3:], models, prior=prior)
     else:
         sys.exit('Select either gpr or svr model')
 
-    # Predict first trajectory in the test set
+    # Predict trajectories in the test set
     x_int, eul_int = integrate_trajectories(models, x_test=x_test, T_vec=T_test, estimator=alg, only_pos=only_pos,
                                             ang_vel=ang_vel)
 
@@ -65,18 +67,18 @@ if __name__ == "__main__":
         print(f"RMSE in angular acceleration in  rad/s^2 is {rmse_ori:.3f}.")
 
     # Compute deviation of predicted and real endpoint
-    dist, dist_ori = np.zeros(len(test_runs)), np.zeros(len(test_runs))
+    diff_pos, diff_ori = np.zeros(len(test_runs)), np.zeros(len(test_runs))
     for ii in range(len(T_test)):
-        dist[ii] = la.norm(x_test[0:3, np.sum(T_test[:ii + 1]) - 1] - x_int[0:3, np.sum(T_test[:ii + 1]) - 1])
-    print("End position deviations in cm are: ", dist * 100)
-    print(f"Mean is {np.mean(dist) * 100:.1f} cm.")
+        diff_pos[ii] = la.norm(x_test[0:3, np.sum(T_test[:ii + 1]) - 1] - x_int[0:3, np.sum(T_test[:ii + 1]) - 1])
+    # print("End position deviations in cm are: ", diff_pos * 100)
+    print(f"Mean is {np.mean(diff_pos) * 100:.1f} +- {np.std(diff_pos) * 100:.1f} cm.")
 
     if not only_pos:
         for ii in range(len(T_test)):
             # dist_ori = la.norm(x_test[3:7, T_test[0] - 1] - x_int[3:7, -1])
-            dist_ori[ii] = eul_norm(eul_test[:, np.sum(T_test[:ii + 1]) - 1], eul_int[:, np.sum(T_test[:ii + 1]) - 1])
-        print("End euler angle deviations in deg are: ", dist_ori)
-        print(f"Mean is: {np.mean(dist_ori):.1f} deg.")
+            diff_ori[ii] = eul_norm(eul_test[:, np.sum(T_test[:ii + 1]) - 1], eul_int[:, np.sum(T_test[:ii + 1]) - 1])
+        # print("End euler angle deviations in deg are: ", diff_ori)
+        print(f"Mean is: {np.mean(diff_ori):.1f} +- {np.std(diff_ori):.1f} deg.")
 
     # PLOT #############################################################################################################
     # Figure out dimensions

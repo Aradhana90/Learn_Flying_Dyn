@@ -29,7 +29,7 @@ def train_svr(x, y, kernel='rbf'):
     for ii in range(out_dim):
         svr_model = GridSearchCV(
             SVR(kernel=kernel, gamma=0.1),
-            param_grid={"C": [1e-1, 1e0, 1e1, 1e2, 1e3], "gamma": [1e-2, 1e-1, 1e0, 1e1, 1e2]},
+            param_grid={"C": [1e-2, 1e-1, 1e0, 1e1, 1e2], "gamma": [1e-3, 1e-2, 1e-1, 1e0]},
         )
         svr.append(svr_model)
 
@@ -38,7 +38,7 @@ def train_svr(x, y, kernel='rbf'):
         t0 = time.time()
         svr[ii].fit(x[:].T, y[ii, :])
         svr_fit = time.time() - t0
-        print(f"Best SVR with params: {svr[ii].best_params_} and R2 score: {svr[ii].best_score_:.3f}")
+        print(f"Best SVR with params: {svr[ii].best_params_}")
         print("SVR complexity and bandwidth selected and model fitted in %.3f s" % svr_fit)
 
     return svr

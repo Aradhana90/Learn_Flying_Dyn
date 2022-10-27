@@ -147,8 +147,8 @@ def get_trajectories(path_to_dir, runs, delta_t=0.01, filter_size=5, which_filte
 
 if __name__ == "__main__":
     # Specify input directory
-    which_object = 'benchmark_box'
-    run = 'med_dist'
+    which_object = 'white_box'
+    run = 'small_dist'
     path = 'extracted/' + which_object + '/' + run + '/'
     pos_only = True
 
@@ -159,23 +159,23 @@ if __name__ == "__main__":
     if not pos_only:
         fig2, axes2 = plt.subplots(3, 4)
     comp_ang_vel = True
-    for _ in range(10, 11):
-        path_tmp = path + str(_ + 1) + '.csv'
+    for _ in range(1, 19):
+        path_tmp = path + str(_) + '.csv'
         # Compare filtering and differentiation approaches
         t1, x1, ddxi1 = get_trajectory(path_tmp, filter_size=5, which_filter='mean', only_pos=pos_only,
                                        ang_vel=comp_ang_vel)
-        x2, ddxi2 = rotate_trajectory(x1, ddxi1)
+        # x2, ddxi2 = rotate_trajectory(x1, ddxi1)
         # t2, x2, ddxi2 = get_trajectory(path, which_filter='savgol')
 
-        fig = plt.figure()
-        ax = plt.axes(projection='3d')
-        ax.plot3D(x1[0], x1[1], x1[2], color='r')
-        ax.plot3D(x2[0], x2[1], x2[2], color='b')
-        ax.set_xlabel('$o_1$')
-        ax.set_ylabel('$o_2$')
-        ax.set_zlabel('$o_3$')
-        ax.set_xlim([-1, 1])
-        ax.set_ylim([-1, 1])
+        # fig = plt.figure()
+        # ax = plt.axes(projection='3d')
+        # ax.plot3D(x1[0], x1[1], x1[2], color='r')
+        # ax.plot3D(x2[0], x2[1], x2[2], color='b')
+        # ax.set_xlabel('$o_1$')
+        # ax.set_ylabel('$o_2$')
+        # ax.set_zlabel('$o_3$')
+        # ax.set_xlim([-1, 1])
+        # ax.set_ylim([-1, 1])
         # Plot position, velocity and acceleration
         # fig, axes = plt.subplots(3, 3)
         if pos_only:
@@ -183,9 +183,9 @@ if __name__ == "__main__":
                 axes1[0, kk].plot(t1, x1[kk, :], 'r')
                 axes1[1, kk].plot(t1, x1[kk + 3, :], 'g')
                 axes1[2, kk].plot(t1, ddxi1[kk, :], 'b')
-                axes1[0, kk].plot(t1, x2[kk, :], 'r--')
-                axes1[1, kk].plot(t1, x2[kk + 3, :], 'g--')
-                axes1[2, kk].plot(t1, ddxi2[kk, :], 'b--')
+                # axes1[0, kk].plot(t1, x2[kk, :], 'r--')
+                # axes1[1, kk].plot(t1, x2[kk + 3, :], 'g--')
+                # axes1[2, kk].plot(t1, ddxi2[kk, :], 'b--')
 
         if not pos_only:
             for kk in range(3):
