@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.integrate import solve_ivp
-from data.mechanics import quatmul, quat2eul
+
+from data.mechanics import quatmul, quat2eul, projectile_motion_disc
 
 
 def get_rmse(y, y_pred, eul=False):
@@ -53,7 +54,7 @@ def eul_norm(eul1, eul2):
     return err
 
 
-def dx_dt(t, x, model, only_pos=True, ang_vel=False, estimator='svr', prior=False):
+def dx_dt(t, x, model, only_pos=True, ang_vel=False, estimator='svr', prior=True):
     """
     :param t:           Time
     :param x:           Current state
@@ -143,15 +144,32 @@ def integrate_trajectories(model, x_test, T_vec, only_pos=True, ang_vel=False, e
     return X_int, Eul_int
 
 
-def integrate_trajectories_disc(predictor, x_test, T_vec):
+def integrate_trajectories_disc(predictor, x_test, T_vec, projectile=False):
+    """
+    :param predictor:   Class containing the GP models
+    :param x_test:      Test set of shape (N_sys, N_samples) providing the initial values
+    :param T_vec:       Vector containing the lengths of the trajectories in the test set. Must sum up to n_samples
+    :param projectile:  If set to true, only the simple projectile motion model is used
+    :return:            Predicted trajectories of shape (N_sys, N_samples)
+    """
+    sys_dim = x_test.shape[0]
+
+    # Integrate trajectories in forward time, i.e., x_k+1 = f(x_k)
     N_tilde = len(T_vec)
-    X_int = np.empty(x_test.shape[0], np.sum(T_vec))
-    for n in range(1, N_tilde):
-        x_init = x_test[:, np.sum(T_vec[:n])]
-        X_tmp = np.empty(len(x_init), T_vec[n])
-        for ii in range(T_vec[n] - 1):
-            X_tmp[ii + 1] = predictor.predict(X_int[:, ii])
-        X_int = np.concatenate((X_int, X_tmp), axis=1)
+    X_int = np.empty((sys_dim, np.sum(T_vec)))
+    for n in range(0, N_tilde):
+        x_init = x_test[:, np.sum(T_vec[:n] - 1)]
+        X_tmp = np.zeros((len(x_init), T_vec[n]))
+        X_tmp[:, 0] = x_init
+        for k in range(T_vec[n] - 1):
+            x_cur = X_tmp[:, k]
+            if not projectile:
+                x_next, _ = predictor.predict(x_cur)
+                x_next = x_next.reshape(sys_dim)
+            else:
+                x_next = projectile_motion_disc(x_cur)
+            X_tmp[:, k + 1] = x_next
+        X_int[:, np.sum(T_vec[:n]): np.sum(T_vec[:n]) + T_vec[n]] = X_tmp
 
     Eul_int = quat2eul(X_int[3:7])
     return X_int, Eul_int

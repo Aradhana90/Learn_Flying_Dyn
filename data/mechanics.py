@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 
 
@@ -125,5 +127,33 @@ def quat2eul(quat):
         theta = np.arcsin(2 * (q0 * q2 - q1 * q3))
         psi = np.arctan2(2 * (q0 * q3 + q1 * q2), 1 - 2 * (q2 ** 2 + q3 ** 2))
         eul[:, ii] = np.array([phi, theta, psi]) * 180 / np.pi
+        if math.isnan(eul[0, ii]) or math.isnan(eul[1, ii]) or math.isnan(eul[2, ii]):
+            print('Euler angle is NaN!')
 
     return eul
+
+
+def projectile_motion_disc(x):
+    """
+    :param x:   Current state of shape (13,)
+    :return:    Next state when applying the projectile motion model
+    """
+    dt = 0.01
+    x_next = np.empty_like(x)
+
+    # Position
+    x_next[0] = x[0] + x[7] * dt
+    x_next[1] = x[1] + x[8] * dt
+    x_next[2] = x[2] + x[9] * dt - 0.5 * 9.81 * dt ** 2
+
+    # Orientation: TODO
+    x_next[3:7] = x[3:7]
+
+    # Linear velocity
+    x_next[7:9] = x[7:9]
+    x_next[9] = x[9] - 9.81 * dt
+
+    # Angular velocity
+    x_next[10:12] = x[10:12]
+
+    return x_next

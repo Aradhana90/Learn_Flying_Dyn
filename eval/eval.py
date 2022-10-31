@@ -17,7 +17,7 @@ only_pos = False
 ang_vel = True
 sys_rep = 'cont'
 aug_factor = 0
-prior = False
+prior = True
 
 # Specify which trajectories to use for training and testing
 train_object = 'benchmark_box'

@@ -58,8 +58,8 @@ def pred_gpr(x, gpr, prior=True):
         y_pred, sigma_pred = gpr.predict(x.T, return_std=True)
 
     # If prior mean has been specified, add back
-    # if prior:
-    # y_pred[2] -= 9.81  # continuous-time case
+    if prior:
+        y_pred[2] -= 9.81  # continuous-time case
 
     return y_pred, sigma_pred
 
