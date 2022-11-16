@@ -14,7 +14,7 @@ def mean_filt(data, filter_size=5):
     return data
 
 
-def get_trajectory(path_to_csv, delta_t=0.01, filter_size=5, which_filter='mean', only_pos=True, ang_vel=False):
+def get_trajectory(path_to_csv, delta_t=0.01, filter_size=5, which_filter='mean', only_pos=True, ang_vel=False, cont_time=True):
     df = pd.read_csv(path_to_csv)
     D_pos, D_vel = 3, 3
     if only_pos:
@@ -47,7 +47,7 @@ def get_trajectory(path_to_csv, delta_t=0.01, filter_size=5, which_filter='mean'
         if which_filter == 'mean':
             xi[ii, :] = mean_filt(xi[ii, :], filter_size)
         elif which_filter == 'savgol':
-            xi[ii, :] = savgol_filter(xi[ii, :], filter_size, 3, mode='nearest')
+            xi[ii, :] = savgol_filter(xi[ii, :], filter_size, 2, mode='nearest')
 
     # Compute linear velocity (and quaternion derivative or angular velocity) by numerical differentiation
     if not ang_vel or only_pos:
@@ -64,7 +64,7 @@ def get_trajectory(path_to_csv, delta_t=0.01, filter_size=5, which_filter='mean'
         if which_filter == 'mean':
             dxi[ii, :] = mean_filt(dxi[ii, :], filter_size)
         elif which_filter == 'savgol':
-            dxi[ii, :] = savgol_filter(dxi[ii, :], filter_size, 3, mode='nearest')
+            dxi[ii, :] = savgol_filter(dxi[ii, :], filter_size, 2, mode='nearest')
 
     # Differentiate velocity data
     ddxi = np.diff(dxi) / delta_t
@@ -74,7 +74,7 @@ def get_trajectory(path_to_csv, delta_t=0.01, filter_size=5, which_filter='mean'
         if which_filter == 'mean':
             ddxi[ii, :] = mean_filt(ddxi[ii, :], filter_size)
         elif which_filter == 'savgol':
-            ddxi[ii, :] = savgol_filter(ddxi[ii, :], filter_size, 3, mode='nearest')
+            ddxi[ii, :] = savgol_filter(ddxi[ii, :], filter_size, 2, mode='nearest')
 
     # Due to differentiation, dxi and ddxi have smaller length than xi
     t = t[:-2]
@@ -82,7 +82,10 @@ def get_trajectory(path_to_csv, delta_t=0.01, filter_size=5, which_filter='mean'
     dxi = dxi[:, :-1]
 
     # Due to filtering, the borders have to be cropped
-    tmp = 3 * int((filter_size - 1) / 2)
+    if cont_time:
+        tmp = 3 * int((filter_size - 1) / 2)
+    else:
+        tmp = 2 * int((filter_size - 1) / 2)
     t = t[0:-2 * tmp]
     xi = xi[:, tmp:-tmp]
     dxi = dxi[:, tmp:-tmp]
@@ -94,7 +97,7 @@ def get_trajectory(path_to_csv, delta_t=0.01, filter_size=5, which_filter='mean'
 
 
 def get_trajectories(path_to_dir, runs, delta_t=0.01, filter_size=5, which_filter='mean', only_pos=True, ang_vel=False,
-                     aug_factor=0):
+                     aug_factor=0, cont_time=True):
     """
     :param path_to_dir:
     :param runs:
@@ -114,7 +117,7 @@ def get_trajectories(path_to_dir, runs, delta_t=0.01, filter_size=5, which_filte
     # Initialize X and Y
     path_to_file = path_to_dir + '/' + str(runs[0]) + '.csv'
     _, X, Y = get_trajectory(path_to_file, delta_t=delta_t, filter_size=filter_size,
-                             which_filter=which_filter, only_pos=only_pos, ang_vel=ang_vel)
+                             which_filter=which_filter, only_pos=only_pos, ang_vel=ang_vel, cont_time=cont_time)
     T_n[0] = X.shape[1]
     for ii in range(aug_factor):
         X_aug, Y_aug = rotate_trajectory(X, Y)
@@ -125,7 +128,7 @@ def get_trajectories(path_to_dir, runs, delta_t=0.01, filter_size=5, which_filte
     for ii in range(1, N_tilde):
         training_path = path_to_dir + '/' + str(runs[ii]) + '.csv'
         _, X_tmp, Y_tmp = get_trajectory(training_path, delta_t=delta_t, filter_size=filter_size,
-                                         which_filter=which_filter, only_pos=only_pos, ang_vel=ang_vel)
+                                         which_filter=which_filter, only_pos=only_pos, ang_vel=ang_vel, cont_time=cont_time)
         X = np.concatenate((X, X_tmp), axis=1)
         Y = np.concatenate((Y, Y_tmp), axis=1)
         T_n[ii * (aug_factor + 1)] = X_tmp.shape[1]
@@ -147,7 +150,7 @@ def get_trajectories(path_to_dir, runs, delta_t=0.01, filter_size=5, which_filte
 
 if __name__ == "__main__":
     # Specify input directory
-    which_object = 'white_box'
+    which_object = 'benchmark_box'
     run = 'small_dist'
     path = 'extracted/' + which_object + '/' + run + '/'
     pos_only = True
@@ -159,10 +162,10 @@ if __name__ == "__main__":
     if not pos_only:
         fig2, axes2 = plt.subplots(3, 4)
     comp_ang_vel = True
-    for _ in range(1, 19):
+    for _ in range(1, 21):
         path_tmp = path + str(_) + '.csv'
         # Compare filtering and differentiation approaches
-        t1, x1, ddxi1 = get_trajectory(path_tmp, filter_size=5, which_filter='mean', only_pos=pos_only,
+        t1, x1, ddxi1 = get_trajectory(path_tmp, filter_size=7, which_filter='mean', only_pos=pos_only,
                                        ang_vel=comp_ang_vel)
         # x2, ddxi2 = rotate_trajectory(x1, ddxi1)
         # t2, x2, ddxi2 = get_trajectory(path, which_filter='savgol')

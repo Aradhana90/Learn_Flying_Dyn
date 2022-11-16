@@ -1,6 +1,6 @@
 import numpy as np
+from learning.gpr.GPR_class import GPRegressor
 from scipy.integrate import solve_ivp
-
 from data.mechanics import quatmul, quat2eul, projectile_motion_disc
 
 
@@ -23,9 +23,26 @@ def get_rmse(y, y_pred, eul=False):
         y_pred_tmp[y_pred_tmp < 0] += 360
 
     # Compute RMSE
-    err = np.linalg.norm(y_tmp - y_pred_tmp, ord=2, axis=0)
+    err = np.linalg.norm(y_tmp - y_pred_tmp, ord=2, axis=0) ** 2
     err = np.sqrt(err.sum() / len(err))
 
+    return err
+
+
+def get_rmse_eul(quat1, quat2):
+    """
+    :param quat1: Quaternion array of shape (4,n_samples)
+    :param quat2: Quaternion array of shape (4,n_samples)
+    :return:
+    """
+    n_samples = quat1.shape[1]
+    eul1 = quat2eul(quat1)
+    eul2 = quat2eul(quat2)
+    err = 0
+    for ii in range(n_samples):
+        err += eul_norm(eul1[:, ii], eul2[:, ii])
+
+    err = np.sqrt(err) / n_samples
     return err
 
 
@@ -54,7 +71,7 @@ def eul_norm(eul1, eul2):
     return err
 
 
-def dx_dt(t, x, model, only_pos=True, ang_vel=False, estimator='svr', prior=True):
+def dx_dt(t, x, model, only_pos=True, ang_vel=False, estimator='svr', prior=True, projectile=False):
     """
     :param t:           Time
     :param x:           Current state
@@ -70,8 +87,9 @@ def dx_dt(t, x, model, only_pos=True, ang_vel=False, estimator='svr', prior=True
 
         dxi_dt = x[sys_dim:]
         ddxi_dt = np.zeros(sys_dim)
-        for ii in range(sys_dim):
-            ddxi_dt[ii] = model[ii].predict(np.expand_dims(x[3:], axis=0))
+        if not projectile:
+            for ii in range(sys_dim):
+                ddxi_dt[ii] = model[ii].predict(np.expand_dims(x[3:], axis=0))
 
     else:
         q = x[3:7]
@@ -81,18 +99,19 @@ def dx_dt(t, x, model, only_pos=True, ang_vel=False, estimator='svr', prior=True
         dxi_dt[0:3] = v
         dxi_dt[3:7] = 0.5 * quatmul(np.append([0], omega), q)
         ddxi_dt = np.zeros(6)
-        for ii in range(6):
-            ddxi_dt[ii] = model[ii].predict(np.expand_dims(x[3:], axis=0))
+        if not projectile:
+            for ii in range(6):
+                ddxi_dt[ii] = model[ii].predict(np.expand_dims(x[3:], axis=0))
 
     # Check if prior mean function has been specified
-    if estimator == 'gpr' and prior is True:
+    if prior is True:
         ddxi_dt[2] -= 9.81
 
     dx_dt = np.concatenate((dxi_dt, ddxi_dt))
     return dx_dt
 
 
-def integrate_trajectory(model, x_init, t_eval, only_pos=True, ang_vel=False, estimator='svr'):
+def integrate_trajectory(model, x_init, t_eval, only_pos=True, ang_vel=False, estimator='svr', prior=True, projectile=False):
     """
     :param model:       SVR or GP models to predict the linear and angular acceleration for the current state
     :param x_init:      Initial state from which to start the numerical integration
@@ -107,7 +126,7 @@ def integrate_trajectory(model, x_init, t_eval, only_pos=True, ang_vel=False, es
     else:
         sys_dim = 7
 
-    sol = solve_ivp(dx_dt, t_span=(0, t_eval[-1]), y0=x_init, t_eval=t_eval, args=(model, only_pos, ang_vel, estimator))
+    sol = solve_ivp(dx_dt, t_span=(0, t_eval[-1]), y0=x_init, t_eval=t_eval, args=(model, only_pos, ang_vel, estimator, prior, projectile))
 
     if not only_pos:
         eul = quat2eul(sol.y[3:7])
@@ -117,7 +136,7 @@ def integrate_trajectory(model, x_init, t_eval, only_pos=True, ang_vel=False, es
     return sol.t, sol.y, eul
 
 
-def integrate_trajectories(model, x_test, T_vec, only_pos=True, ang_vel=False, estimator='svr'):
+def integrate_trajectories(model, x_test, T_vec, only_pos=True, ang_vel=False, estimator='svr', prior=True, projectile=False):
     """
     :param model:       SVR or GP models to predict the linear and angular acceleration for the current state
     :param x_test:      N_tilde test trajectories, shape is (13, N)
@@ -130,13 +149,13 @@ def integrate_trajectories(model, x_test, T_vec, only_pos=True, ang_vel=False, e
     x_init = x_test[:, 0]
     t_eval = np.linspace(0, (T_vec[0] - 1) * 0.01, T_vec[0])
     _, X_int, Eul_int = integrate_trajectory(model=model, x_init=x_init, t_eval=t_eval, only_pos=only_pos,
-                                             ang_vel=ang_vel, estimator=estimator)
+                                             ang_vel=ang_vel, estimator=estimator, prior=prior, projectile=projectile)
     N_tilde = len(T_vec)
     for n in range(1, N_tilde):
         x_init = x_test[:, np.sum(T_vec[:n])]
         t_eval = np.linspace(0, (T_vec[n] - 1) * 0.01, T_vec[n])
         _, X_tmp, Eul_tmp = integrate_trajectory(model=model, x_init=x_init, t_eval=t_eval, only_pos=only_pos,
-                                                 ang_vel=ang_vel, estimator=estimator)
+                                                 ang_vel=ang_vel, estimator=estimator, prior=prior, projectile=projectile)
         X_int = np.concatenate((X_int, X_tmp), axis=1)
         if not only_pos:
             Eul_int = np.concatenate((Eul_int, Eul_tmp), axis=1)
@@ -154,6 +173,9 @@ def integrate_trajectories_disc(predictor, x_test, T_vec, projectile=False):
     """
     sys_dim = x_test.shape[0]
 
+    # if predictor.use_gpflow:
+    # x_test = tnp.copy(x_test)
+
     # Integrate trajectories in forward time, i.e., x_k+1 = f(x_k)
     N_tilde = len(T_vec)
     X_int = np.empty((sys_dim, np.sum(T_vec)))
@@ -164,7 +186,10 @@ def integrate_trajectories_disc(predictor, x_test, T_vec, projectile=False):
         for k in range(T_vec[n] - 1):
             x_cur = X_tmp[:, k]
             if not projectile:
-                x_next, _ = predictor.predict(x_cur)
+                if isinstance(predictor, GPRegressor):
+                    x_next, _ = predictor.predict(x_cur)
+                else:
+                    x_next = predictor.predict(x_cur)
                 x_next = x_next.reshape(sys_dim)
             else:
                 x_next = projectile_motion_disc(x_cur)

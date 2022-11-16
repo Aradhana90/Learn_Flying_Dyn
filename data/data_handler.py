@@ -3,23 +3,29 @@ import numpy as np
 from .filter_and_diff import get_trajectories
 from .mechanics import quat2eul
 
+
 class DataHandler:
 
-    def __init__(self, dt=0.1):
+    def __init__(self, dt=0.01, filter_size=5, cont_time=False):
+        self.dt = dt
+        self.filter_size = filter_size
         self.X_train = []
         self.Y_train = []
         self.X_test = []
         self.Y_test = []
         self.Eul_test = []
-        self.dt = dt
         self.T_vec = []
+        self.cont_time = cont_time
 
     def add_trajectories(self, path_to_dir, indices, which='train'):
-        xi, _, eul, T_vec = get_trajectories(path_to_dir, indices, only_pos=False, ang_vel=True)
+        xi, _, eul, T_vec = get_trajectories(path_to_dir, indices, only_pos=False, ang_vel=True,
+                                             filter_size=self.filter_size, cont_time=self.cont_time)
 
+        # Initialize X and Y with the states
         X = np.copy(xi)
         Y = np.copy(xi)
 
+        # Delete the last value of each trajectory from X and the first value of each trajectory from Y
         del_x = np.zeros(len(T_vec))
         del_y = np.zeros(len(T_vec))
         for ii in range(len(T_vec)):

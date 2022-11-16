@@ -2,7 +2,6 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.linalg as la
-from sklearn.gaussian_process.kernels import RBF, WhiteKernel, Matern, ConstantKernel
 
 from data.filter_and_diff import get_trajectory, get_trajectories
 from data.mechanics import quat2eul
@@ -11,27 +10,32 @@ from learning.gpr.GPR import train_gpr, pred_gpr
 from learning.svr.SVR import train_svr, pred_svr
 
 # Specify algorithm and system model
-alg = 'gpr'
-gpr_kernel = RBF() + Matern() + WhiteKernel()
+alg = 'proj'
 only_pos = False
 ang_vel = True
 sys_rep = 'cont'
 aug_factor = 0
 prior = True
+kernel_indices = [0]
+dset = 3
+
+if dset == 0:
+    obj, run, n_traj = 'benchmark_box', 'small_dist', 20
+elif dset == 1:
+    obj, run, n_traj = 'benchmark_box', 'med_dist', 19
+elif dset == 2:
+    obj, run, n_traj = 'white_box', 'small_dist', 18
+else:
+    obj, run, n_traj = 'white_box', 'med_dist', 21
 
 # Specify which trajectories to use for training and testing
-train_object = 'benchmark_box'
-train_run = 'med_dist'
-training_dir = '../data/extracted/' + train_object + '/' + train_run
+training_dir = '../data/extracted/' + obj + '/' + run
 training_runs = np.arange(1, 11)
+test_dir = '../data/extracted/' + obj + '/' + run
+# test_runs = np.delete(np.arange(1, n_traj + 1), training_runs - 1)
+test_runs = [11]
 
-test_object = 'benchmark_box'
-test_run = 'med_dist'
-test_dir = '../data/extracted/' + test_object + '/' + test_run
-test_runs = np.arange(11, 20)
-# test_runs = ([17])
-
-filter_size = 5
+filter_size = 7
 
 if __name__ == "__main__":
     # Training data
@@ -46,39 +50,45 @@ if __name__ == "__main__":
 
     print('Created training and test data.')
     # Train models and predict acceleration
-    if alg == 'svr':
-        models = train_svr(x_train[3:], y_train)
-        y_pred = pred_svr(x_test[3:], models)
-    elif alg == 'gpr':
-        models = train_gpr(x_train[3:], y_train, kernel=gpr_kernel, prior=prior)
-        y_pred, _ = pred_gpr(x_test[3:], models, prior=prior)
-    else:
-        sys.exit('Select either gpr or svr model')
+    for k in range(len(kernel_indices)):
+        models = []
+        if alg == 'svr':
+            models = train_svr(x_train[3:], y_train)
+            y_pred = pred_svr(x_test[3:], models)
+        elif alg == 'gpr':
+            models = train_gpr(x_train[3:], y_train, prior=prior, kernel_idx=kernel_indices[k])
+            y_pred, _ = pred_gpr(x_test[3:], models, prior=prior)
+        elif alg == 'proj':
+            y_pred = np.zeros((6, x_test.shape[1]))
+            y_pred[2] -= 9.81
+        else:
+            sys.exit('Select either gpr or svr model')
 
-    # Predict trajectories in the test set
-    x_int, eul_int = integrate_trajectories(models, x_test=x_test, T_vec=T_test, estimator=alg, only_pos=only_pos,
-                                            ang_vel=ang_vel)
+        # Predict trajectories in the test set
+        x_int, eul_int = integrate_trajectories(models, x_test=x_test, T_vec=T_test, estimator=alg, only_pos=only_pos,
+                                                ang_vel=ang_vel, prior=prior)
 
-    # Compute RMSE
-    rmse_pos = get_rmse(y_test[0:3], y_pred[0:3])
-    print(f"RMSE in linear acceleration in m/s^2 is {rmse_pos:.3f}.")
-    if not only_pos:
-        rmse_ori = get_rmse(y_test[3:6], y_pred[3:6])
-        print(f"RMSE in angular acceleration in  rad/s^2 is {rmse_ori:.3f}.")
+        print(kernel_indices[k])
+        # Compute RMSE
+        rmse_pos = get_rmse(y_test[0:3], y_pred[0:3])
+        print(f"RMSE in linear acceleration in m/s^2 is {rmse_pos:.3f}.")
+        if not only_pos:
+            rmse_ori = get_rmse(y_test[3:6], y_pred[3:6])
+            print(f"RMSE in angular acceleration in  rad/s^2 is {rmse_ori:.3f}.")
 
-    # Compute deviation of predicted and real endpoint
-    diff_pos, diff_ori = np.zeros(len(test_runs)), np.zeros(len(test_runs))
-    for ii in range(len(T_test)):
-        diff_pos[ii] = la.norm(x_test[0:3, np.sum(T_test[:ii + 1]) - 1] - x_int[0:3, np.sum(T_test[:ii + 1]) - 1])
-    # print("End position deviations in cm are: ", diff_pos * 100)
-    print(f"Mean is {np.mean(diff_pos) * 100:.1f} +- {np.std(diff_pos) * 100:.1f} cm.")
-
-    if not only_pos:
+        # Compute deviation of predicted and real endpoint
+        diff_pos, diff_ori = np.zeros(len(test_runs)), np.zeros(len(test_runs))
         for ii in range(len(T_test)):
-            # dist_ori = la.norm(x_test[3:7, T_test[0] - 1] - x_int[3:7, -1])
-            diff_ori[ii] = eul_norm(eul_test[:, np.sum(T_test[:ii + 1]) - 1], eul_int[:, np.sum(T_test[:ii + 1]) - 1])
-        # print("End euler angle deviations in deg are: ", diff_ori)
-        print(f"Mean is: {np.mean(diff_ori):.1f} +- {np.std(diff_ori):.1f} deg.")
+            diff_pos[ii] = la.norm(x_test[0:3, np.sum(T_test[:ii + 1]) - 1] - x_int[0:3, np.sum(T_test[:ii + 1]) - 1])
+        print("End position deviations in cm are: ", diff_pos * 100)
+        print(f"Mean is {np.mean(diff_pos) * 100:.1f} +- {np.std(diff_pos) * 100:.1f} cm.")
+
+        if not only_pos:
+            for ii in range(len(T_test)):
+                # dist_ori = la.norm(x_test[3:7, T_test[0] - 1] - x_int[3:7, -1])
+                diff_ori[ii] = eul_norm(eul_test[:, np.sum(T_test[:ii + 1]) - 1], eul_int[:, np.sum(T_test[:ii + 1]) - 1])
+            print("End euler angle deviations in deg are: ", diff_ori)
+            print(f"Mean is: {np.mean(diff_ori):.1f} +- {np.std(diff_ori):.1f} deg.")
 
     # PLOT #############################################################################################################
     # Figure out dimensions

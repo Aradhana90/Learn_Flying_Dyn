@@ -1,0 +1,19 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+numpy = "*"
+sklearn = "*"
+matplotlib = "*"
+tensorflow-probability = "*"
+pandas = "*"
+tensorflow = "*"
+gpflow = "*"
+tikzplotlib = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.8"

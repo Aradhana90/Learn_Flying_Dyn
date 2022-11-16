@@ -157,3 +157,52 @@ def projectile_motion_disc(x):
     x_next[10:12] = x[10:12]
 
     return x_next
+
+
+def sub_prior(Xt, Yt, sub=True):
+    """
+    :param Xt:  Training data of shape (13, N_samples)
+    :param Yt:  Training targets of shape (13, N_samples)
+    :param sub: True if the mean should be subtracted, False if the mean should be added back
+    :return:    Mean-subtracted/added targets of shape (13, N_samples)
+    """
+
+    if Xt.ndim == 1:
+        X = Xt[:, np.newaxis]
+        Y = Yt[:, np.newaxis]
+    else:
+        X = np.copy(Xt)
+        Y = np.copy(Yt)
+
+    n_samples = X.shape[1]
+    dt = 0.01
+
+    if sub:
+        sign = -1
+    else:
+        sign = 1
+
+    # Position: o_next = o_cur + v_cur * dt + 0.5 * [0, 0, -9.81] * dt**2
+    Y_new = np.copy(Y)
+    Y_new[0] += sign * X[0] + sign * X[7] * dt
+    Y_new[1] += sign * X[1] + sign * X[8] * dt
+    Y_new[2] += sign * X[2] + sign * X[9] * dt - sign * 0.5 * 9.81 * dt ** 2
+
+    # Orientation: q_next = q_cur + 0.5 * omega_cur * q_cur
+    tmp = np.empty((4, n_samples))
+    for ii in range(n_samples):
+        q = X[3:7, ii]
+        omega = np.append([0], X[10:13, ii])
+        tmp[:, ii] = 0.5 * quatmul(omega, q) * dt
+
+    Y_new[3:7] += sign * X[3:7] + sign * tmp
+
+    # Linear velocity: v_next = v_cur + [0, 0, -9.81 dt]
+    Y_new[7] += sign * X[7]
+    Y_new[8] += sign * X[8]
+    Y_new[9] += sign * X[9] - sign * 9.81 * dt
+
+    # Angular velocity:
+    Y_new[10:13] += sign * X[10:13]
+
+    return Y_new
