@@ -23,13 +23,12 @@ class SVRegressor:
                                         [0, 1, 2],
                                         [0, 1, 2]], dtype=list)
 
-    def __init__(self, n_features, n_targets, kernel=kernel, prior=True, sys_rep='discrete'):
+    def __init__(self, n_features, n_targets, kernel=kernel, prior=True):
         self.models = []
         self.n_features = n_features
         self.n_targets = n_targets
         self.kernel = kernel
         self.prior = prior
-        self.sys_rep = sys_rep
 
     def train(self, X, Y):
         if self.prior:

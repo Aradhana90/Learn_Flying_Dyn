@@ -6,7 +6,7 @@ import tikzplotlib
 
 from data.filter_and_diff import get_trajectory, get_trajectories
 from data.mechanics import quat2eul
-from eval.metrics import get_rmse, integrate_trajectories, eul_norm
+from eval.metrics import get_rmse, integrate_trajectories_old, eul_norm
 
 # Specify algorithm and system model
 alg = 'proj'
@@ -50,8 +50,8 @@ if __name__ == "__main__":
     y_pred[2] -= 9.81
 
     # Predict trajectories in the test set
-    x_int, eul_int = integrate_trajectories([], x_test=x_test, T_vec=T_test, estimator=alg, only_pos=only_pos,
-                                            ang_vel=ang_vel, prior=prior, projectile=True)
+    x_int, eul_int = integrate_trajectories_old([], x_test=x_test, T_vec=T_test, estimator=alg, only_pos=only_pos,
+                                                ang_vel=ang_vel, prior=prior, projectile=True)
 
     # Compute RMSE
     rmse_pos = get_rmse(y_test[0:3], y_pred[0:3])

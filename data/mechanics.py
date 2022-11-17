@@ -55,7 +55,7 @@ def get_ang_vel(quat, delta_t=0.01):
     return omega
 
 
-def get_zrot(angle, o):
+def get_zrot(angle, o=np.zeros(3)):
     """
     :param angle:   Angle around which to rotate the frame
     :param o:
@@ -159,12 +159,12 @@ def projectile_motion_disc(x):
     return x_next
 
 
-def sub_prior(Xt, Yt, sub=True):
+def sub_prior(Xt, Yt, sub=True, sys_rep='cont'):
     """
-    :param Xt:  Training data of shape (13, N_samples)
-    :param Yt:  Training targets of shape (13, N_samples)
+    :param Xt:  Training data of shape (10, N_samples) or (13, N_samples)
+    :param Yt:  Training targets of shape (6, N_samples) or (13, N_samples)
     :param sub: True if the mean should be subtracted, False if the mean should be added back
-    :return:    Mean-subtracted/added targets of shape (13, N_samples)
+    :return:    Mean-subtracted/added targets of shape (6, N_samples) or (13, N_samples)
     """
 
     if Xt.ndim == 1:
@@ -182,27 +182,63 @@ def sub_prior(Xt, Yt, sub=True):
     else:
         sign = 1
 
-    # Position: o_next = o_cur + v_cur * dt + 0.5 * [0, 0, -9.81] * dt**2
-    Y_new = np.copy(Y)
-    Y_new[0] += sign * X[0] + sign * X[7] * dt
-    Y_new[1] += sign * X[1] + sign * X[8] * dt
-    Y_new[2] += sign * X[2] + sign * X[9] * dt - sign * 0.5 * 9.81 * dt ** 2
+    if sys_rep == 'cont':
+        Y_new = np.copy(Y)
+        Y_new[2] -= sign * 9.81
+    else:
+        # Position: o_next = o_cur + v_cur * dt + 0.5 * [0, 0, -9.81] * dt**2
+        Y_new = np.copy(Y)
+        Y_new[0] += sign * X[0] + sign * X[7] * dt
+        Y_new[1] += sign * X[1] + sign * X[8] * dt
+        Y_new[2] += sign * X[2] + sign * X[9] * dt - sign * 0.5 * 9.81 * dt ** 2
 
-    # Orientation: q_next = q_cur + 0.5 * omega_cur * q_cur
-    tmp = np.empty((4, n_samples))
-    for ii in range(n_samples):
-        q = X[3:7, ii]
-        omega = np.append([0], X[10:13, ii])
-        tmp[:, ii] = 0.5 * quatmul(omega, q) * dt
+        # Orientation: q_next = q_cur + 0.5 * omega_cur * q_cur
+        tmp = np.empty((4, n_samples))
+        for ii in range(n_samples):
+            q = X[3:7, ii]
+            omega = np.append([0], X[10:13, ii])
+            tmp[:, ii] = 0.5 * quatmul(omega, q) * dt
 
-    Y_new[3:7] += sign * X[3:7] + sign * tmp
+        Y_new[3:7] += sign * X[3:7] + sign * tmp
 
-    # Linear velocity: v_next = v_cur + [0, 0, -9.81 dt]
-    Y_new[7] += sign * X[7]
-    Y_new[8] += sign * X[8]
-    Y_new[9] += sign * X[9] - sign * 9.81 * dt
+        # Linear velocity: v_next = v_cur + [0, 0, -9.81 dt]
+        Y_new[7] += sign * X[7]
+        Y_new[8] += sign * X[8]
+        Y_new[9] += sign * X[9] - sign * 9.81 * dt
 
-    # Angular velocity:
-    Y_new[10:13] += sign * X[10:13]
+        # Angular velocity:
+        Y_new[10:13] += sign * X[10:13]
 
     return Y_new
+
+
+def rotate_trajectories_to_plane(x, T_vec):
+    """
+    :param x:       States of shape (19, n_samples) consisting of position, orientation, linear and angular velocity and acceleration
+    :param T_vec:   Length of the trajectories. Entries must sum up to n_samples
+    :return:        States of shape (19, n_samples) for the rotated trajectories such that each has an initial velocity in the x-z-plane
+    """
+    N_traj = len(T_vec)
+    x_rot = np.copy(x)
+    for ii in range(N_traj):
+        x_tmp = x[:, sum(T_vec[0:ii]): sum(T_vec[0:ii]) + T_vec[ii]]  # States of trajectory ii
+        # Initial velocity
+        v_init = x_tmp[7:10, 0]
+        # Angle between horizontal projection of the initial velocity and the x-z-plane
+        phi = np.arctan2(v_init[1], v_init[0])
+        R, _ = get_zrot(-phi)
+        q = np.array([np.cos(-phi / 2), 0, 0, np.sin(-phi / 2)], dtype=float)
+
+        # Rotate positions, linear and angular velocities and linear and angular accelerations
+        for kk in range(T_vec[ii]):
+            x_rot[0:3, sum(T_vec[0:ii]) + kk] = R @ x_tmp[0:3, kk]  # o
+            x_rot[3:7, sum(T_vec[0:ii]) + kk] = quatmul(q, quatmul(x_tmp[3:7, kk], quatconj(q)))
+            x_rot[7:10, sum(T_vec[0:ii]) + kk] = R @ x_tmp[7:10, kk]  # v
+            x_rot[10:13, sum(T_vec[0:ii]) + kk] = R @ x_tmp[10:13, kk]  # \omega
+            x_rot[13:16, sum(T_vec[0:ii]) + kk] = R @ x_tmp[13:16, kk]  # \dot{v}
+            x_rot[16:19, sum(T_vec[0:ii]) + kk] = R @ x_tmp[16:19, kk]  # \dot{\omega}
+
+        # Shift trajectory such that the y = 0 for the initial position
+        x_rot[1, sum(T_vec[0:ii]): sum(T_vec[0:ii]) + T_vec[ii]] -= x_rot[1, sum(T_vec[0:ii])]
+
+    return x_rot

@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy.linalg as la
 import numpy as np
-from metrics import get_rmse, integrate_trajectory
+from metrics import get_rmse, integrate_trajectory_old
 from learning.svr.SVR import train_svr, pred_svr
 from data.filter_and_diff import get_trajectory
 
@@ -41,7 +41,7 @@ if __name__ == "__main__":
     y_pred = pred_svr(x_test[3:], svr_models)
 
     # Predict first trajectory in the test set
-    _, x_int = integrate_trajectory(svr_models, x_test[:, 0], t_eval=t_test, estimator='svr')
+    _, x_int = integrate_trajectory_old(svr_models, x_test[:, 0], t_eval=t_test, estimator='svr')
 
     # Compute RMSE
     rmse = get_rmse(y_test, y_pred)

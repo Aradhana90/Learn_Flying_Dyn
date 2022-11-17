@@ -1,5 +1,5 @@
 import numpy as np
-from learning.gpr.GPR_class import GPRegressor
+from learning.gpr.GPR_disc import GPRegressor
 from scipy.integrate import solve_ivp
 from data.mechanics import quatmul, quat2eul, projectile_motion_disc
 
@@ -58,11 +58,12 @@ def eul_norm(eul1, eul2):
     # diff[(eul1 > 0) & (eul2 < 0)] = min(diff, abs(eul1 - eul2 - 360))[(eul1 > 0) & (eul2 < 0)]
 
     diff = abs(eul1 - eul2)
+    angle_range = [180, 90, 180]
     for ii in range(3):
         if eul1[ii] < 0 and eul2[ii] > 0:
-            diff[ii] = min(diff[ii], abs(eul1[ii] + 360 - eul2[ii]))
+            diff[ii] = min(diff[ii], abs(eul1[ii] + 2 * angle_range[ii] - eul2[ii]))
         elif eul1[ii] > 0 and eul2[ii] < 0:
-            diff[ii] = min(diff[ii], abs(eul1[ii] - eul2[ii] - 360))
+            diff[ii] = min(diff[ii], abs(eul1[ii] - eul2[ii] - 2 * angle_range[ii]))
 
     # Compute norm
     err = np.linalg.norm(diff, ord=2)
@@ -71,7 +72,7 @@ def eul_norm(eul1, eul2):
     return err
 
 
-def dx_dt(t, x, model, only_pos=True, ang_vel=False, estimator='svr', prior=True, projectile=False):
+def dx_dt_old(t, x, model, only_pos=True, ang_vel=False, estimator='svr', prior=True, projectile=False):
     """
     :param t:           Time
     :param x:           Current state
@@ -111,7 +112,7 @@ def dx_dt(t, x, model, only_pos=True, ang_vel=False, estimator='svr', prior=True
     return dx_dt
 
 
-def integrate_trajectory(model, x_init, t_eval, only_pos=True, ang_vel=False, estimator='svr', prior=True, projectile=False):
+def integrate_trajectory_old(model, x_init, t_eval, only_pos=True, ang_vel=False, estimator='svr', prior=True, projectile=False):
     """
     :param model:       SVR or GP models to predict the linear and angular acceleration for the current state
     :param x_init:      Initial state from which to start the numerical integration
@@ -126,7 +127,7 @@ def integrate_trajectory(model, x_init, t_eval, only_pos=True, ang_vel=False, es
     else:
         sys_dim = 7
 
-    sol = solve_ivp(dx_dt, t_span=(0, t_eval[-1]), y0=x_init, t_eval=t_eval, args=(model, only_pos, ang_vel, estimator, prior, projectile))
+    sol = solve_ivp(dx_dt_old, t_span=(0, t_eval[-1]), y0=x_init, t_eval=t_eval, args=(model, only_pos, ang_vel, estimator, prior, projectile))
 
     if not only_pos:
         eul = quat2eul(sol.y[3:7])
@@ -136,7 +137,7 @@ def integrate_trajectory(model, x_init, t_eval, only_pos=True, ang_vel=False, es
     return sol.t, sol.y, eul
 
 
-def integrate_trajectories(model, x_test, T_vec, only_pos=True, ang_vel=False, estimator='svr', prior=True, projectile=False):
+def integrate_trajectories_old(model, x_test, T_vec, only_pos=True, ang_vel=False, estimator='svr', prior=True, projectile=False):
     """
     :param model:       SVR or GP models to predict the linear and angular acceleration for the current state
     :param x_test:      N_tilde test trajectories, shape is (13, N)
@@ -148,17 +149,80 @@ def integrate_trajectories(model, x_test, T_vec, only_pos=True, ang_vel=False, e
 
     x_init = x_test[:, 0]
     t_eval = np.linspace(0, (T_vec[0] - 1) * 0.01, T_vec[0])
-    _, X_int, Eul_int = integrate_trajectory(model=model, x_init=x_init, t_eval=t_eval, only_pos=only_pos,
-                                             ang_vel=ang_vel, estimator=estimator, prior=prior, projectile=projectile)
+    _, X_int, Eul_int = integrate_trajectory_old(model=model, x_init=x_init, t_eval=t_eval, only_pos=only_pos,
+                                                 ang_vel=ang_vel, estimator=estimator, prior=prior, projectile=projectile)
     N_tilde = len(T_vec)
     for n in range(1, N_tilde):
         x_init = x_test[:, np.sum(T_vec[:n])]
         t_eval = np.linspace(0, (T_vec[n] - 1) * 0.01, T_vec[n])
-        _, X_tmp, Eul_tmp = integrate_trajectory(model=model, x_init=x_init, t_eval=t_eval, only_pos=only_pos,
-                                                 ang_vel=ang_vel, estimator=estimator, prior=prior, projectile=projectile)
+        _, X_tmp, Eul_tmp = integrate_trajectory_old(model=model, x_init=x_init, t_eval=t_eval, only_pos=only_pos,
+                                                     ang_vel=ang_vel, estimator=estimator, prior=prior, projectile=projectile)
         X_int = np.concatenate((X_int, X_tmp), axis=1)
         if not only_pos:
             Eul_int = np.concatenate((Eul_int, Eul_tmp), axis=1)
+
+    return X_int, Eul_int
+
+
+def dx_dt(t, x, model, projectile):
+    """
+        :param t:           Time
+        :param x:           Current state
+        :param model:       List of 1D svr models or a GPR mode to predict the acceleration
+        :param projectile:  If true, the simple projectile model is used instead of the learned prediction model
+        :return:            Predicted linear (and angular) acceleration
+        """
+
+    q = x[3:7]
+    v = x[7:10]
+    omega = x[10:13]
+    dxi_dt = np.zeros(7)
+    dxi_dt[0:3] = v
+    dxi_dt[3:7] = 0.5 * quatmul(np.append([0], omega), q)
+    if not projectile:
+        ddxi_dt, _ = model.predict(x)
+    else:
+        ddxi_dt = np.zeros(6)
+        ddxi_dt[2] = -9.81
+
+    dx_dt = np.concatenate((dxi_dt, ddxi_dt.reshape((6,))))
+    return dx_dt
+
+
+def integrate_trajectory(model, x_init, t_eval, projectile=False):
+    """
+        :param model:       SVR or GP models to predict the linear and angular acceleration for the current state
+        :param x_init:      Initial state from which to start the numerical integration
+        :param t_eval:      Timesteps for which to store the integration results
+        :param projectile:  If true, the simple projectile model is used instead of the learned prediction model
+        :return:            Predicted trajectory
+        """
+
+    sol = solve_ivp(dx_dt, t_span=(0, t_eval[-1]), y0=x_init, t_eval=t_eval, args=(model, projectile))
+    eul = quat2eul(sol.y[3:7])
+
+    return sol.t, sol.y, eul
+
+
+def integrate_trajectories_cont(model, x_test, T_vec, projectile=False):
+    """
+        :param model:       SVR or GP models to predict the linear and angular acceleration for the current state
+        :param x_test:      N_tilde test trajectories, shape is (13, N)
+        :param T_vec:       Contains as integers the lengths of the N_tilde trajectories, shape is (N_tilde,). Values have to add up to N.
+        :param projectile:  If true, the simple projectile model is used instead of the learned prediction model
+        :return:            Predicted trajectories
+        """
+
+    x_init = x_test[:, 0]
+    t_eval = np.linspace(0, (T_vec[0] - 1) * 0.01, T_vec[0])
+    _, X_int, Eul_int = integrate_trajectory(model=model, x_init=x_init, t_eval=t_eval, projectile=projectile)
+    N_tilde = len(T_vec)
+    for n in range(1, N_tilde):
+        x_init = x_test[:, np.sum(T_vec[:n])]
+        t_eval = np.linspace(0, (T_vec[n] - 1) * 0.01, T_vec[n])
+        _, X_tmp, Eul_tmp = integrate_trajectory(model=model, x_init=x_init, t_eval=t_eval, projectile=projectile)
+        X_int = np.concatenate((X_int, X_tmp), axis=1)
+        Eul_int = np.concatenate((Eul_int, Eul_tmp), axis=1)
 
     return X_int, Eul_int
 
@@ -172,9 +236,6 @@ def integrate_trajectories_disc(predictor, x_test, T_vec, projectile=False):
     :return:            Predicted trajectories of shape (N_sys, N_samples)
     """
     sys_dim = x_test.shape[0]
-
-    # if predictor.use_gpflow:
-    # x_test = tnp.copy(x_test)
 
     # Integrate trajectories in forward time, i.e., x_k+1 = f(x_k)
     N_tilde = len(T_vec)

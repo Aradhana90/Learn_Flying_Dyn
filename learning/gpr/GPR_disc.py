@@ -210,7 +210,7 @@ class GPRegressor:
 
     def train(self, X, Y):
         if self.prior:
-            Y_train = sub_prior(X, Y)
+            Y_train = sub_prior(X, Y, sys_rep='disc')
         else:
             Y_train = Y
 
@@ -269,7 +269,7 @@ class GPRegressor:
 
         # Add prior mean function back
         if self.prior:
-            Y_pred = sub_prior(X, Y_tmp, sub=False)
+            Y_pred = sub_prior(X, Y_tmp, sub=False, sys_rep='disc')
         else:
             Y_pred = Y_tmp
 

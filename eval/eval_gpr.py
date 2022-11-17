@@ -5,7 +5,7 @@ import numpy.linalg as la
 from learning.gpr.GPR import train_gpr, pred_gpr
 from sklearn.gaussian_process.kernels import RBF, WhiteKernel
 from data.filter_and_diff import get_trajectory
-from metrics import get_rmse, integrate_trajectory
+from metrics import get_rmse, integrate_trajectory_old
 
 # Specify which trajectories to use
 which_object = 'white_box'
@@ -42,7 +42,7 @@ if __name__ == "__main__":
     y_pred, _ = pred_gpr(x_test[3:], gpr_models)
 
     # Predict first trajectory in the test set
-    _, x_int = integrate_trajectory(gpr_models, x_test[:, 0], t_eval=t_test, estimator='gpr')
+    _, x_int = integrate_trajectory_old(gpr_models, x_test[:, 0], t_eval=t_test, estimator='gpr')
 
     # Compute RMSE
     rmse = get_rmse(y_test, y_pred)

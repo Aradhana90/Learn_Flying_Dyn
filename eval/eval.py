@@ -5,7 +5,7 @@ import numpy.linalg as la
 
 from data.filter_and_diff import get_trajectory, get_trajectories
 from data.mechanics import quat2eul
-from metrics import get_rmse, integrate_trajectories, eul_norm
+from metrics import get_rmse, integrate_trajectories_old, eul_norm
 from learning.gpr.GPR import train_gpr, pred_gpr
 from learning.svr.SVR import train_svr, pred_svr
 
@@ -65,8 +65,8 @@ if __name__ == "__main__":
             sys.exit('Select either gpr or svr model')
 
         # Predict trajectories in the test set
-        x_int, eul_int = integrate_trajectories(models, x_test=x_test, T_vec=T_test, estimator=alg, only_pos=only_pos,
-                                                ang_vel=ang_vel, prior=prior)
+        x_int, eul_int = integrate_trajectories_old(models, x_test=x_test, T_vec=T_test, estimator=alg, only_pos=only_pos,
+                                                    ang_vel=ang_vel, prior=prior)
 
         print(kernel_indices[k])
         # Compute RMSE
