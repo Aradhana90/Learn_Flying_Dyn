@@ -17,8 +17,4 @@ def get_zrot(angle):
     return R
 
 
-v0 = np.array([2, 1, 0.5])
-phi = np.arctan2(v0[1], v0[0])
-print(phi * 360 / (2 * np.pi))
-R = get_zrot(-phi)
-print(R @ v0)
+print(np.random.rand(10, 5))
