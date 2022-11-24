@@ -15,7 +15,7 @@ only_pos = False
 ang_vel = True
 prior = True
 kernel_indices = [1]
-obj = 1
+obj = 0
 path = ['../data/extracted/benchmark_box/small_dist', '../data/extracted/benchmark_box/med_dist', '../data/extracted/white_box/small_dist',
         '../data/extracted/white_box/med_dist']
 n_traj = [20, 19, 18, 21]
@@ -31,7 +31,7 @@ filter_size = 7
 if __name__ == "__main__":
     # Training data
     dh = DataHandler(dt=0.01, filter_size=7, cont_time=True, rot_to_plane=True)
-    if obj == 1:
+    if obj == 0:
         dh.add_trajectories(path[0], training_runs, 'train')
         dh.add_trajectories(path[0], test_runs[0], 'test')
         dh.add_trajectories(path[1], training_runs, 'train')

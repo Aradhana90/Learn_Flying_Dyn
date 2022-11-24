@@ -212,6 +212,44 @@ def sub_prior(Xt, Yt, sub=True, sys_rep='cont'):
     return Y_new
 
 
+def grad_proj(x, dt=0.01):
+    """
+    :param X:   Input of shape (13,)
+    :return:    Gradient of the projectile motion model with respect to x
+    """
+
+    g = np.eye(13)
+    g[0, 7] = dt
+    g[1, 8] = dt
+    g[2, 9] = dt
+    g[3, 4] = -x[10] * dt / 2
+    g[3, 5] = -x[11] * dt / 2
+    g[3, 6] = -x[12] * dt / 2
+    g[3, 10] = -x[4] * dt / 2
+    g[3, 11] = -x[5] * dt / 2
+    g[3, 12] = -x[6] * dt / 2
+    g[4, 3] = x[10] * dt / 2
+    g[4, 5] = -x[12] * dt / 2
+    g[4, 6] = x[11] * dt / 2
+    g[4, 10] = x[3] * dt / 2
+    g[4, 11] = x[6] * dt / 2
+    g[4, 12] = -x[5] * dt / 2
+    g[5, 3] = x[11] * dt / 2
+    g[5, 4] = x[12] * dt / 2
+    g[5, 6] = -x[10] * dt / 2
+    g[5, 10] = -x[6] * dt / 2
+    g[5, 11] = x[3] * dt / 2
+    g[5, 12] = x[4] * dt / 2
+    g[6, 3] = x[12] * dt / 2
+    g[6, 4] = -x[11] * dt / 2
+    g[6, 5] = x[10] * dt / 2
+    g[6, 10] = x[5] * dt / 2
+    g[6, 11] = -x[4] * dt / 2
+    g[6, 12] = x[3] * dt / 2
+
+    return g
+
+
 def rotate_trajectories_to_plane(x, T_vec):
     """
     :param x:       States of shape (19, n_samples) consisting of position, orientation, linear and angular velocity and acceleration

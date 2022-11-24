@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.linalg as la
+import pickle
 from sklearn.gaussian_process.kernels import WhiteKernel, RBF, ConstantKernel, Matern
 
 from data.data_handler import DataHandler
@@ -13,30 +14,31 @@ alg = 'gpr'
 ang_vel = True
 sys_rep = 'cont'
 aug_factor = 0
-kernel_indices = [0, 1, 5, 6, 7]
-dset = 3
-
-if dset == 0:
-    obj, run, n_traj = 'benchmark_box', 'small_dist', 20
-elif dset == 1:
-    obj, run, n_traj = 'benchmark_box', 'med_dist', 19
-elif dset == 2:
-    obj, run, n_traj = 'white_box', 'small_dist', 18
-else:
-    obj, run, n_traj = 'white_box', 'med_dist', 21
+kernel_indices = [1]
+obj = 0
+path = ['../data/extracted/benchmark_box/small_dist', '../data/extracted/benchmark_box/med_dist', '../data/extracted/white_box/small_dist',
+        '../data/extracted/white_box/med_dist']
+n_traj = [20, 19, 18, 21]
 
 # Specify which trajectories to use for training and testing
-training_dir = '../data/extracted/' + obj + '/' + run
-training_runs = np.arange(1, 11)
-test_dir = '../data/extracted/' + obj + '/' + run
-test_runs = np.delete(np.arange(1, n_traj + 1), training_runs - 1)
-# test_runs = ([17])
+training_runs = np.arange(1, 3)
+test_runs = []
+for ii in range(4):
+    test_runs.append(np.delete(np.arange(1, n_traj[ii] + 1), training_runs - 1))
 
 if __name__ == "__main__":
     # Training data
-    dh = DataHandler(dt=0.01, filter_size=7, cont_time=False)
-    dh.add_trajectories(training_dir, training_runs, 'train')
-    dh.add_trajectories(test_dir, test_runs, 'test')
+    dh = DataHandler(dt=0.01, filter_size=7, cont_time=False, rot_to_plane=True)
+    if obj == 0:
+        dh.add_trajectories(path[0], training_runs, 'train')
+        dh.add_trajectories(path[0], test_runs[0], 'test')
+        dh.add_trajectories(path[1], training_runs, 'train')
+        dh.add_trajectories(path[1], test_runs[1], 'test')
+    else:
+        dh.add_trajectories(path[2], training_runs, 'train')
+        dh.add_trajectories(path[2], test_runs[2], 'test')
+        dh.add_trajectories(path[3], training_runs, 'train')
+        dh.add_trajectories(path[3], test_runs[3], 'test')
 
     print('Created training and test data.')
 
@@ -74,7 +76,7 @@ if __name__ == "__main__":
         X_proj, Eul_proj = integrate_trajectories_disc(model, dh.X_test, dh.T_vec, projectile=True)
 
         # Deviations in final position and orientation
-        diff_pos, diff_ori = np.zeros(len(test_runs)), np.zeros(len(test_runs))
+        diff_pos, diff_ori = np.zeros(len(dh.T_vec)), np.zeros(len(dh.T_vec))
         for ii in range(len(dh.T_vec)):
             diff_pos[ii] = la.norm(
                 dh.Y_test[0:3, np.sum(dh.T_vec[:ii + 1] - 1) - 1] - X_int[0:3, np.sum(dh.T_vec[:ii + 1]) - 1])

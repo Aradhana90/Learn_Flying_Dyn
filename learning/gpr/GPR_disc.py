@@ -15,7 +15,7 @@ warnings.warn = warn
 import warnings
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import WhiteKernel, RBF, ConstantKernel, Matern
-from data.mechanics import sub_prior
+from data.mechanics import sub_prior, grad_proj
 
 
 def get_kernels(idx=0):
@@ -225,23 +225,21 @@ class GPRegressor:
 
             # Create model
             t0 = time.time()
-            if not self.use_gpflow:
-                gpr_model = GaussianProcessRegressor(normalize_y=True, n_restarts_optimizer=self.n_restarts,
-                                                     kernel=self.kernel[ii], alpha=1e-5)
-                gpr_model.fit(X_use.T, Y_train[ii].T)
-            else:
-                X_tf, Y_tf = tf.convert_to_tensor(X_use.T, dtype=tf.float64), \
-                             tf.convert_to_tensor(Y_train[np.newaxis, ii].T, dtype=tf.float64)
-                gpr_model = gpflow.models.GPR((X_tf, Y_tf), kernel=gpflow.kernels.SquaredExponential())
-                opt = gpflow.optimizers.Scipy()
-                opt.minimize(gpr_model.training_loss, gpr_model.trainable_variables)
+            # if not self.use_gpflow:
+            gpr_model = GaussianProcessRegressor(normalize_y=True, n_restarts_optimizer=self.n_restarts,
+                                                 kernel=self.kernel[ii], alpha=1e-5)
+            gpr_model.fit(X_use.T, Y_train[ii].T)
+            # else:
+            #     X_tf, Y_tf = tf.convert_to_tensor(X_use.T, dtype=tf.float64), \
+            #                  tf.convert_to_tensor(Y_train[np.newaxis, ii].T, dtype=tf.float64)
+            #     gpr_model = gpflow.models.GPR((X_tf, Y_tf), kernel=gpflow.kernels.SquaredExponential())
+            #     opt = gpflow.optimizers.Scipy()
+            #     opt.minimize(gpr_model.training_loss, gpr_model.trainable_variables)
             self.models.append(gpr_model)
 
             # if not self.use_gpflow:
-            #     print(f"GP model {ii} fitted in {time.time() - t0:.2f} seconds, kernel is: {self.models[ii].kernel_}")
+            print(f"GP model {ii} fitted in {time.time() - t0:.2f} seconds, kernel is: {self.models[ii].kernel_}")
             # else:
-            #     print(
-            #         f"GP model {ii} fitted in {time.time() - t0:.2f} seconds, kernel is: {self.models[ii].kernel.parameters}")
         print(f"GP fitting took {time.time() - t_total:.2f} seconds.")
 
     def predict(self, X):
@@ -252,7 +250,7 @@ class GPRegressor:
             raise SystemExit('Test input does not have appropriate dimensions!')
 
         n_samples = X.shape[1]
-        Y_tmp, sigma_pred = np.empty((self.n_targets, n_samples)), np.empty((self.n_targets, n_samples))
+        mu_d, Sigma_d = np.empty((self.n_targets, n_samples)), np.empty((self.n_targets, self.n_targets, n_samples))
         for ii in range(self.n_targets):
             # Remove useless state components
             if not self.ignore_state_components.any():
@@ -260,21 +258,58 @@ class GPRegressor:
             else:
                 X_use = np.delete(X, self.ignore_state_components[ii], axis=0)
 
-            if not self.use_gpflow:
-                Y_tmp[ii], sigma_pred[ii] = self.models[ii].predict(X_use.T, return_std=True)
-            else:
-                X_tf = tf.convert_to_tensor(X_use.T, dtype=tf.float64)
-                Y_pred_tf, sigma_pred_tf = self.models[ii].predict_f(X_tf)
-                Y_tmp[ii], sigma_pred[ii] = Y_pred_tf.numpy().T, sigma_pred_tf.numpy().T
+            # if not self.use_gpflow:
+            mu_d[ii], Sigma_d[ii, ii] = self.models[ii].predict(X_use.T, return_std=True)
+            # else:
+            #     X_tf = tf.convert_to_tensor(X_use.T, dtype=tf.float64)
+            #     Y_pred_tf, sigma_pred_tf = self.models[ii].predict_f(X_tf)
+            #     Y_tmp[ii], sigma_pred[ii] = Y_pred_tf.numpy().T, sigma_pred_tf.numpy().T
 
         # Add prior mean function back
         if self.prior:
-            Y_pred = sub_prior(X, Y_tmp, sub=False, sys_rep='disc')
+            Y_pred = sub_prior(X, mu_d, sub=False, sys_rep='disc')
         else:
-            Y_pred = Y_tmp
+            Y_pred = mu_d
 
         # Normalize quaternion
         Y_pred[3:7] = Y_pred[3:7] / np.linalg.norm(Y_pred[3:7], axis=0)
         # if self.sys_rep == 'discrete':
 
-        return Y_pred, sigma_pred
+        return Y_pred, Sigma_d
+
+    def predict_unc_prop(self, mu_k, Sigma_k):
+        """
+        :param mu_k:    Mean of the current state distribution
+        :param Sigma_k: Variance of the current state distribution
+        :return:
+        """
+
+        mu_d, Sigma_d = np.empty((self.n_targets)), np.empty((self.n_targets, self.n_targets))
+        for ii in range(self.n_targets):
+            # Remove useless state components
+            if not self.ignore_state_components.any():
+                X_use = np.copy(mu_k)
+            else:
+                X_use = np.delete(mu_k, self.ignore_state_components[ii], axis=0)
+
+            mu_d[ii], Sigma_d[ii, ii] = self.models[ii].predict(X_use.T, return_std=True)
+
+        # Add prior mean function back
+        if self.prior:
+            mu_kp1 = sub_prior(mu_k, mu_d, sub=False, sys_rep='disc')
+        else:
+            mu_kp1 = mu_d
+        # Normalize quaternion
+        mu_kp1[3:7] = mu_kp1[3:7] / np.linalg.norm(mu_kp1[3:7], axis=0)
+
+        # Propagate uncertainty (Hewing et al., 2018)
+        A = np.concatenate((grad_proj(mu_k), np.eye(self.n_targets)))
+
+        lower_left = np.zeros(self.n_targets)  # TODO
+        B = np.block([
+            [Sigma_k, lower_left.T],
+            [lower_left, Sigma_d]
+        ])
+        Sigma_kp1 = A @ B @ A.T
+
+        return mu_kp1, Sigma_kp1
