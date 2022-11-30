@@ -227,35 +227,54 @@ def integrate_trajectories_cont(model, x_test, T_vec, projectile=False):
     return X_int, Eul_int
 
 
-def integrate_trajectories_disc(predictor, x_test, T_vec, projectile=False):
+def integrate_trajectories_disc(predictor, x_test, T_vec, projectile=False, unc_prop=False):
     """
     :param predictor:   Class containing the GP models
     :param x_test:      Test set of shape (N_sys, N_samples) providing the initial values
     :param T_vec:       Vector containing the lengths of the trajectories in the test set. Must sum up to n_samples
     :param projectile:  If set to true, only the simple projectile motion model is used
+    :param unc_prop:    Whether to propagate the uncertainty, i.e., consider the test input as Gaussian distributed
     :return:            Predicted trajectories of shape (N_sys, N_samples)
     """
     sys_dim = x_test.shape[0]
 
-    # Integrate trajectories in forward time, i.e., x_k+1 = f(x_k)
+    # Number of trajectories
     N_tilde = len(T_vec)
+
+    # Variables to store the integrated trajectories
     X_int = np.empty((sys_dim, np.sum(T_vec)))
+    Sigma_int = np.empty((sys_dim, np.sum(T_vec)))
+    Sigma_prop_int = np.empty((sys_dim, np.sum(T_vec)))
+
+    # Integrate trajectories in forward time, i.e., x_k+1 = f(x_k)
     for n in range(0, N_tilde):
-        x_init = x_test[:, np.sum(T_vec[:n] - 1)]
-        X_tmp = np.zeros((len(x_init), T_vec[n]))
+        x_init = x_test[:, np.sum(T_vec[:n] - 1)]  # Initial state
+        X_tmp = np.zeros((sys_dim, T_vec[n]))  # States
         X_tmp[:, 0] = x_init
+        Sigma_tmp = np.zeros((sys_dim, T_vec[n]))  # Covariance matrices
+        Sigma_prop_tmp = np.zeros((sys_dim, T_vec[n]))  # Covariance matrices
         for k in range(T_vec[n] - 1):
             x_cur = X_tmp[:, k]
             if not projectile:
                 if isinstance(predictor, GPRegressor):
-                    x_next, _ = predictor.predict(x_cur)
+                    if unc_prop is False:
+                        x_next, sigma_next = predictor.predict(x_cur)
+                    else:
+                        x_next, sigma_prop_next, sigma_next = predictor.predict_unc_prop(x_cur, Sigma_prop_tmp[:, k])
+                        sigma_prop_next = sigma_prop_next.reshape(sys_dim)
+                        Sigma_prop_tmp[:, k + 1] = sigma_prop_next
                 else:
                     x_next = predictor.predict(x_cur)
                 x_next = x_next.reshape(sys_dim)
+                sigma_next = sigma_next.reshape(sys_dim)
+                Sigma_tmp[:, k + 1] = sigma_next
             else:
                 x_next = projectile_motion_disc(x_cur)
             X_tmp[:, k + 1] = x_next
+
         X_int[:, np.sum(T_vec[:n]): np.sum(T_vec[:n]) + T_vec[n]] = X_tmp
+        Sigma_prop_int[:, np.sum(T_vec[:n]): np.sum(T_vec[:n]) + T_vec[n]] = Sigma_prop_tmp
+        Sigma_int[:, np.sum(T_vec[:n]): np.sum(T_vec[:n]) + T_vec[n]] = Sigma_tmp
 
     Eul_int = quat2eul(X_int[3:7])
-    return X_int, Eul_int
+    return X_int, Eul_int, Sigma_prop_int, Sigma_int

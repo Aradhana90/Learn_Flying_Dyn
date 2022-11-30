@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.linalg as la
-import pickle
+import joblib
 from sklearn.gaussian_process.kernels import WhiteKernel, RBF, ConstantKernel, Matern
 
 from data.data_handler import DataHandler
@@ -11,9 +11,7 @@ from metrics import get_rmse, get_rmse_eul, eul_norm, integrate_trajectories_dis
 
 # Specify algorithm and system model
 alg = 'gpr'
-ang_vel = True
-sys_rep = 'cont'
-aug_factor = 0
+save = True
 kernel_indices = [1]
 obj = 0
 path = ['../data/extracted/benchmark_box/small_dist', '../data/extracted/benchmark_box/med_dist', '../data/extracted/white_box/small_dist',
@@ -21,7 +19,7 @@ path = ['../data/extracted/benchmark_box/small_dist', '../data/extracted/benchma
 n_traj = [20, 19, 18, 21]
 
 # Specify which trajectories to use for training and testing
-training_runs = np.arange(1, 3)
+training_runs = np.arange(1, 6)
 test_runs = []
 for ii in range(4):
     test_runs.append(np.delete(np.arange(1, n_traj[ii] + 1), training_runs - 1))
@@ -70,10 +68,10 @@ if __name__ == "__main__":
         print(f"RMSE in angular velocity in deg/s is {rmse_ang:.3f}.")
 
         # Predict trajectories with GP
-        X_int, Eul_int = integrate_trajectories_disc(model, dh.X_test, dh.T_vec)
+        X_int, Eul_int, _, _ = integrate_trajectories_disc(model, dh.X_test, dh.T_vec)
 
         # Predict trajectories with projectile model
-        X_proj, Eul_proj = integrate_trajectories_disc(model, dh.X_test, dh.T_vec, projectile=True)
+        X_proj, Eul_proj, _, _ = integrate_trajectories_disc(model, dh.X_test, dh.T_vec, projectile=True)
 
         # Deviations in final position and orientation
         diff_pos, diff_ori = np.zeros(len(dh.T_vec)), np.zeros(len(dh.T_vec))
@@ -87,6 +85,13 @@ if __name__ == "__main__":
         print(f"Mean is {np.mean(diff_pos) * 100:.1f} +- {np.std(diff_pos) * 100:.1f} cm.")
         print(f"Mean is: {np.mean(diff_ori):.1f} +- {np.std(diff_ori):.1f} deg.")
 
+    # Store model
+    if save:
+        # Precompute expressions for uncertainty propagation
+        # model.compute_grams(dh.X_train)
+        joblib.dump(model, './gp_models/gp_model.sav')
+
+    """ ----------------- PLOT ----------------- """
     # 3D plot of real and first predicted trajectory
     fig = plt.figure()
     ax = plt.axes(projection='3d')
