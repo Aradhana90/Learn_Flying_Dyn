@@ -89,7 +89,9 @@ if __name__ == "__main__":
     if save:
         # Precompute expressions for uncertainty propagation
         # model.compute_grams(dh.X_train)
-        joblib.dump(model, './gp_models/gp_model.sav')
+        file_name = 'obj_' + str(obj) + '_runs_' + str(training_runs[0]) + 'to' + str(training_runs[-1]) + '_kernel_' + str(
+            kernel_indices[0]) + '.sav'
+        joblib.dump(model, './gp_models/' + file_name)
 
     """ ----------------- PLOT ----------------- """
     # 3D plot of real and first predicted trajectory

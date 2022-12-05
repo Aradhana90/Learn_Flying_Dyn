@@ -244,7 +244,7 @@ def integrate_trajectories_disc(predictor, x_test, T_vec, projectile=False, unc_
     # Variables to store the integrated trajectories
     X_int = np.empty((sys_dim, np.sum(T_vec)))
     Sigma_int = np.empty((sys_dim, np.sum(T_vec)))
-    Sigma_prop_int = np.empty((sys_dim, np.sum(T_vec)))
+    Sigma_prop_int = np.empty((sys_dim, sys_dim, np.sum(T_vec)))
 
     # Integrate trajectories in forward time, i.e., x_k+1 = f(x_k)
     for n in range(0, N_tilde):
@@ -252,7 +252,7 @@ def integrate_trajectories_disc(predictor, x_test, T_vec, projectile=False, unc_
         X_tmp = np.zeros((sys_dim, T_vec[n]))  # States
         X_tmp[:, 0] = x_init
         Sigma_tmp = np.zeros((sys_dim, T_vec[n]))  # Covariance matrices
-        Sigma_prop_tmp = np.zeros((sys_dim, T_vec[n]))  # Covariance matrices
+        Sigma_prop_tmp = np.zeros((sys_dim, sys_dim, T_vec[n]))  # Covariance matrices
         for k in range(T_vec[n] - 1):
             x_cur = X_tmp[:, k]
             if not projectile:
@@ -260,9 +260,9 @@ def integrate_trajectories_disc(predictor, x_test, T_vec, projectile=False, unc_
                     if unc_prop is False:
                         x_next, sigma_next = predictor.predict(x_cur)
                     else:
-                        x_next, sigma_prop_next, sigma_next = predictor.predict_unc_prop(x_cur, Sigma_prop_tmp[:, k])
-                        sigma_prop_next = sigma_prop_next.reshape(sys_dim)
-                        Sigma_prop_tmp[:, k + 1] = sigma_prop_next
+                        x_next, sigma_prop_next, sigma_next = predictor.predict_unc_prop(x_cur, Sigma_prop_tmp[:, :, k])
+                        # sigma_prop_next = sigma_prop_next.reshape(sys_dim)
+                        Sigma_prop_tmp[:, :, k + 1] = sigma_prop_next
                 else:
                     x_next = predictor.predict(x_cur)
                 x_next = x_next.reshape(sys_dim)
@@ -273,7 +273,7 @@ def integrate_trajectories_disc(predictor, x_test, T_vec, projectile=False, unc_
             X_tmp[:, k + 1] = x_next
 
         X_int[:, np.sum(T_vec[:n]): np.sum(T_vec[:n]) + T_vec[n]] = X_tmp
-        Sigma_prop_int[:, np.sum(T_vec[:n]): np.sum(T_vec[:n]) + T_vec[n]] = Sigma_prop_tmp
+        Sigma_prop_int[:, :, np.sum(T_vec[:n]): np.sum(T_vec[:n]) + T_vec[n]] = Sigma_prop_tmp
         Sigma_int[:, np.sum(T_vec[:n]): np.sum(T_vec[:n]) + T_vec[n]] = Sigma_tmp
 
     Eul_int = quat2eul(X_int[3:7])

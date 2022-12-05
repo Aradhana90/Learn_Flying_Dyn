@@ -33,20 +33,35 @@ def get_kernels(idx=0):
                    ConstantKernel() * RBF() + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
                    ConstantKernel() * RBF() + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
                    ]
+    # elif idx == 1:
+    #     kernels = [ConstantKernel() * RBF(length_scale=np.ones(11)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
+    #                ConstantKernel() * RBF(length_scale=np.ones(11)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
+    #                ConstantKernel() * RBF(length_scale=np.ones(11)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
+    #                ConstantKernel() * RBF(length_scale=np.ones(10)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
+    #                ConstantKernel() * RBF(length_scale=np.ones(10)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
+    #                ConstantKernel() * RBF(length_scale=np.ones(10)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
+    #                ConstantKernel() * RBF(length_scale=np.ones(10)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
+    #                ConstantKernel() * RBF(length_scale=np.ones(10)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
+    #                ConstantKernel() * RBF(length_scale=np.ones(10)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
+    #                ConstantKernel() * RBF(length_scale=np.ones(10)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
+    #                ConstantKernel() * RBF(length_scale=np.ones(10)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
+    #                ConstantKernel() * RBF(length_scale=np.ones(10)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
+    #                ConstantKernel() * RBF(length_scale=np.ones(10)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
+    #                ]
     elif idx == 1:
-        kernels = [ConstantKernel() * RBF(length_scale=np.ones(11)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
-                   ConstantKernel() * RBF(length_scale=np.ones(11)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
-                   ConstantKernel() * RBF(length_scale=np.ones(11)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
-                   ConstantKernel() * RBF(length_scale=np.ones(10)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
-                   ConstantKernel() * RBF(length_scale=np.ones(10)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
-                   ConstantKernel() * RBF(length_scale=np.ones(10)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
-                   ConstantKernel() * RBF(length_scale=np.ones(10)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
-                   ConstantKernel() * RBF(length_scale=np.ones(10)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
-                   ConstantKernel() * RBF(length_scale=np.ones(10)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
-                   ConstantKernel() * RBF(length_scale=np.ones(10)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
-                   ConstantKernel() * RBF(length_scale=np.ones(10)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
-                   ConstantKernel() * RBF(length_scale=np.ones(10)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
-                   ConstantKernel() * RBF(length_scale=np.ones(10)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
+        kernels = [ConstantKernel() * RBF(length_scale=np.ones(13)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
+                   ConstantKernel() * RBF(length_scale=np.ones(13)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
+                   ConstantKernel() * RBF(length_scale=np.ones(13)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
+                   ConstantKernel() * RBF(length_scale=np.ones(13)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
+                   ConstantKernel() * RBF(length_scale=np.ones(13)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
+                   ConstantKernel() * RBF(length_scale=np.ones(13)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
+                   ConstantKernel() * RBF(length_scale=np.ones(13)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
+                   ConstantKernel() * RBF(length_scale=np.ones(13)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
+                   ConstantKernel() * RBF(length_scale=np.ones(13)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
+                   ConstantKernel() * RBF(length_scale=np.ones(13)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
+                   ConstantKernel() * RBF(length_scale=np.ones(13)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
+                   ConstantKernel() * RBF(length_scale=np.ones(13)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
+                   ConstantKernel() * RBF(length_scale=np.ones(13)) + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
                    ]
     elif idx == 2:
         kernels = [ConstantKernel() * Matern() + WhiteKernel(noise_level_bounds=(1e-5, 1e-1)),
@@ -167,19 +182,20 @@ def get_kernels(idx=0):
 
 class GPRegressor:
     dt = 0.01
-    ignore_state_components = np.array([[1, 2],
-                                        [0, 2],
-                                        [0, 1],
-                                        [0, 1, 2],
-                                        [0, 1, 2],
-                                        [0, 1, 2],
-                                        [0, 1, 2],
-                                        [0, 1, 2],
-                                        [0, 1, 2],
-                                        [0, 1, 2],
-                                        [0, 1, 2],
-                                        [0, 1, 2],
-                                        [0, 1, 2]], dtype=list)
+    # ignore_state_components = np.array([[1, 2],
+    #                                     [0, 2],
+    #                                     [0, 1],
+    #                                     [0, 1, 2],
+    #                                     [0, 1, 2],
+    #                                     [0, 1, 2],
+    #                                     [0, 1, 2],
+    #                                     [0, 1, 2],
+    #                                     [0, 1, 2],
+    #                                     [0, 1, 2],
+    #                                     [0, 1, 2],
+    #                                     [0, 1, 2],
+    #                                     [0, 1, 2]], dtype=list)
+    ignore_state_components = np.array([])
 
     def __init__(self, n_features, n_targets, kernel_idx=0, prior=True, sys_rep='discrete', n_restarts=4,
                  use_gpflow=False):
@@ -263,18 +279,19 @@ class GPRegressor:
         Y_pred[3:7] = Y_pred[3:7] / la.norm(Y_pred[3:7], axis=0)
         # if self.sys_rep == 'discrete':
 
-        return Y_pred, Sigma_d
+        return Y_pred, Sigma_d ** 2  # Square because Sigma_d is the standard deviation
 
     def predict_unc_prop(self, mu_k, Sigma_k):
         """
         :param mu_k:    Mean of the current state distribution of shape (sys_dim,)
-        :param Sigma_k: Variance of the current state distribution stored in a vector of shape (sys_dim,)
+        :param Sigma_k: Variance of the current state distribution stored in a vector of shape (sys_dim,sys_dim)
         :return:        Predicted mean of shape (sys_dim,)
                         Predicted covariance of shape (sys_dim,)
                         Predicted propagated covariance of shape (sys_dim,)
         """
 
         mu_k = mu_k[:, np.newaxis]
+        # Sigma_k = np.diag(np.diagonal(Sigma_k))  # Does not really make sense, should consider full covariance matrix
 
         n_samples = mu_k.shape[1]
         mu_d, Sigma_d = np.empty((self.n_targets, 1)), np.empty((self.n_targets, 1))
@@ -285,7 +302,8 @@ class GPRegressor:
             else:
                 X_use = np.delete(mu_k, self.ignore_state_components[ii], axis=0)
 
-            mu_d[ii], Sigma_d[ii] = self.models[ii].predict(X_use.T, return_std=True)
+            mu_d[ii], std_dev = self.models[ii].predict(X_use.T, return_std=True)
+            Sigma_d[ii] = std_dev ** 2
 
         # Add prior mean function back
         if self.prior:
@@ -295,18 +313,26 @@ class GPRegressor:
         # Normalize quaternion
         mu_kp1[3:7] = mu_kp1[3:7] / la.norm(mu_kp1[3:7], axis=0)
 
-        # Propagate uncertainty (Hewing et al., 2018)
-        A = np.concatenate((grad_proj(mu_k), np.eye(self.n_targets)), axis=1)
+        # Appendix formulation
+        grad_full = grad_proj(mu_k) + self.grad_mu(mu_k)
+        Sigma_kp1 = Sigma_d + grad_full @ Sigma_k @ grad_full.T
 
-        # lower_left = np.zeros((self.n_targets, self.n_targets))  # TODO
-        lower_left = self.grad_mu(mu_k) @ np.diag(Sigma_k)
-        B = np.block([
-            [np.diag(Sigma_k), lower_left.T],
-            [lower_left, np.diag(Sigma_d[:, 0])]
-        ])
-        Sigma_kp1 = A @ B @ A.T
+        # # Propagate uncertainty (Hewing et al., 2018)
+        # A = np.concatenate((grad_proj(mu_k), np.eye(self.n_targets)), axis=1)
+        #
+        # # lower_left = np.zeros((self.n_targets, self.n_targets))
+        # grad = self.grad_mu(mu_k)
+        # if grad.max() > 1e2:
+        #     print('alert')
+        # lower_left = grad @ Sigma_k
+        # # print(lower_left)
+        # B = np.block([
+        #     [Sigma_k, lower_left.T],
+        #     [lower_left, np.diag(Sigma_d[:, 0])]
+        # ])
+        # Sigma_kp1 = A @ B @ A.T
 
-        return mu_kp1, Sigma_kp1.diagonal(), Sigma_d
+        return mu_kp1, Sigma_kp1, Sigma_d
 
     def compute_grams(self):
         """
@@ -314,7 +340,7 @@ class GPRegressor:
         """
         n_samples = self.X_train.shape[1]
 
-        self.K = np.empty((self.n_targets, n_samples, n_samples))
+        self.K_inv = np.empty((self.n_targets, n_samples, n_samples))
 
         for ii in range(self.n_targets):
             # Delete useless state components
@@ -323,11 +349,11 @@ class GPRegressor:
             else:
                 X = np.delete(self.X_train, self.ignore_state_components[ii], axis=0)
 
-            self.K[ii] = self.models[ii].kernel_(X.T)
+            self.K_inv[ii] = la.inv(self.models[ii].kernel_(X.T) + np.eye(n_samples) * self.noise[ii])
 
     def get_kernel_params(self):
         # Get kernel parameters
-        self.L = []
+        self.L_inv = []
         self.C = []
         self.noise = []
         for ii in range(self.n_targets):
@@ -337,29 +363,33 @@ class GPRegressor:
 
             # Length scales
             l = kernel.k1.k2.length_scale
-            # Set length scales of not considered state components to very high value
-            L = np.ones(self.n_features) * 1e+06
-            counter = 0
-            for kk in range(self.n_features):
-                if kk not in self.ignore_state_components[ii]:
-                    L[kk] = l[counter]
-                    counter += 1
-            self.L.append(np.diag(L))
+            if not self.ignore_state_components.any():
+                self.L_inv.append(np.diag(1 / (l ** 2)))
+            else:
+                # Set length scales of not considered state components to very high value
+                L_inv = np.zeros(self.n_features)
+                counter = 0
+                for kk in range(self.n_features):
+                    if kk not in self.ignore_state_components[ii]:
+                        L_inv[kk] = 1 / (l[counter] ** 2)
+                        counter += 1
+                self.L_inv.append(np.diag(L_inv))
 
             # Noise
             self.noise.append(kernel.k2.noise_level)
 
     def grad_k(self, x1, x2, ii):
         """
-        :param x1:  input of size (n_features,)
-        :param x2:  input of size (n_features,)
+        :param x1:  input of size (n_features,1)
+        :param x2:  input of size (n_features,1)
         :param ii:  Output component for which to compute the gradient
         :return:    Gradient of the RBF kernel function with respect to x1
         """
 
         # Compute gradient of \mu with respect to the x1
-        grad_k = - self.C[ii] * np.exp(-0.5 * (x1 - x2).T @ la.inv(self.L[ii]) @ (x1 - x2)) * la.inv(self.L[ii]) @ (x1 - x2)
-
+        grad_k = - self.C[ii] * np.exp(-0.5 * (x1 - x2).T @ self.L_inv[ii] @ (x1 - x2)) * self.L_inv[ii] @ (x1 - x2)
+        # k = self.models[ii].kernel_(np.concatenate((x1.T, x2.T), axis=0))[0, 1]
+        # grad_k = - k * la.inv(self.L_inv[ii]) @ (x1 - x2)
         return grad_k.reshape(grad_k.shape[0])
 
     def grad_mu(self, x):
@@ -370,11 +400,18 @@ class GPRegressor:
         n_train = self.X_train.shape[1]
         grad_mu = np.zeros((self.n_features, self.n_features))
 
+        # for ii in range(self.n_targets):
+        #     grad_K = np.zeros((self.n_features, n_train))
+        #     for kk in range(n_train):
+        #         grad_K[:, kk] = self.grad_k(x, self.X_train[:, kk].reshape(self.n_features, 1), ii)
+        #     # grad_mu[ii, :] = grad_K @ la.inv(self.K[ii] + np.eye(self.K[ii].shape[0]) * self.noise[ii]) @ self.Y_train[ii, :].T
+        #     grad_mu[ii, :] = grad_K @ la.inv(self.K[ii]) @ self.Y_train[ii, :]
+
         for ii in range(self.n_targets):
-            grad_K = np.zeros((self.n_features, n_train))
+            grad_K = np.zeros((n_train, self.n_features))
             for kk in range(n_train):
-                grad_K[:, kk] = self.grad_k(x, self.X_train[:, kk].reshape(self.n_features, 1), ii)
+                grad_K[kk, :] = self.grad_k(x, self.X_train[:, kk].reshape(self.n_features, 1), ii)
             # grad_mu[ii, :] = grad_K @ la.inv(self.K[ii] + np.eye(self.K[ii].shape[0]) * self.noise[ii]) @ self.Y_train[ii, :].T
-            grad_mu[ii, :] = grad_K @ la.inv(self.K[ii]) @ self.Y_train[ii, :]
+            grad_mu[ii, :] = self.Y_train[ii, :] @ self.K_inv[ii] @ grad_K
 
         return grad_mu
