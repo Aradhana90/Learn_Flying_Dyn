@@ -1,8 +1,11 @@
 # Learn_Flying_Dyn
-# to get .csv files, extract relevant topics, clean it and fit regression methods 
-Run bag2csv_ros.py on any bag file
+This project implements Gaussian process (GP) state space models for predicting the flying trajectories of different objects.
 
-Run clean_data.py to clean, train and test
+The raw measured data, i.e., the measured positions and orientations, is stored in data/raw. 
+Mean-filtering and numerical differentiation are applied in data/filter_and_diff.py to create suitable training data.
 
+GP models are trained with cross-validation in eval/train_many.py.
 
-Run learn_with_pos_orientation.py to clean, train and test with only 3D positions, velocities
+Multiple evaluation scripts are provided in the folder eval/eval_scripts to assess the RMSE, predicted final position and orientation
+and the predicted uncertainty.
+ 

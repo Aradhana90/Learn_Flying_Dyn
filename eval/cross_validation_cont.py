@@ -5,8 +5,7 @@ import numpy as np
 import numpy.linalg as la
 
 from data.data_handler import DataHandler
-from data.mechanics import quat2eul
-from metrics import get_rmse, integrate_trajectories_cont, eul_norm
+from eval.functions.metrics import get_rmse, integrate_trajectories_cont, eul_norm
 from learning.gpr.GPR_cont import GPRegressor
 from learning.svr.SVR_cont import SVRegressor
 
@@ -16,7 +15,7 @@ only_pos = False
 ang_vel = True
 prior = True
 kernel_index = 1
-N_cross_validation = 4
+N_cross_validation = 10
 split_ratio = 0.4
 obj = 0
 path = ['../data/extracted/benchmark_box/small_dist', '../data/extracted/benchmark_box/med_dist', '../data/extracted/white_box/small_dist',

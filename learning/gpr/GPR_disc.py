@@ -197,14 +197,13 @@ class GPRegressor:
     #                                     [0, 1, 2]], dtype=list)
     ignore_state_components = np.array([])
 
-    def __init__(self, n_features, n_targets, kernel_idx=0, prior=True, sys_rep='discrete', n_restarts=4,
-                 use_gpflow=False):
+    def __init__(self, n_features, n_targets, kernel_idx=0, prior=True, n_restarts=4):
         self.models = []
         self.n_features = n_features
         self.n_targets = n_targets
         self.kernel = get_kernels(kernel_idx)
+        self.kernel_idx = kernel_idx
         self.prior = prior
-        self.sys_rep = sys_rep
         self.n_restarts = n_restarts
         self.X_Train = []
         self.Y_train = []
@@ -218,7 +217,6 @@ class GPRegressor:
         else:
             Y_train = Y
 
-        # if self.sys_rep == 'discrete':
         t_total = time.time()
         for ii in range(self.n_targets):
             # Delete useless state components
@@ -229,21 +227,13 @@ class GPRegressor:
 
             # Create model
             t0 = time.time()
-            # if not self.use_gpflow:
             gpr_model = GaussianProcessRegressor(normalize_y=True, n_restarts_optimizer=self.n_restarts,
                                                  kernel=self.kernel[ii], alpha=1e-5)
             gpr_model.fit(X_use.T, Y_train[ii].T)
-            # else:
-            #     X_tf, Y_tf = tf.convert_to_tensor(X_use.T, dtype=tf.float64), \
-            #                  tf.convert_to_tensor(Y_train[np.newaxis, ii].T, dtype=tf.float64)
-            #     gpr_model = gpflow.models.GPR((X_tf, Y_tf), kernel=gpflow.kernels.SquaredExponential())
-            #     opt = gpflow.optimizers.Scipy()
-            #     opt.minimize(gpr_model.training_loss, gpr_model.trainable_variables)
             self.models.append(gpr_model)
 
-            # if not self.use_gpflow:
             print(f"GP model {ii} fitted in {time.time() - t0:.2f} seconds, kernel is: {self.models[ii].kernel_}")
-            # else:
+
         print(f"GP fitting took {time.time() - t_total:.2f} seconds.")
 
     def predict(self, X):
@@ -259,7 +249,7 @@ class GPRegressor:
             raise SystemExit('Test input does not have appropriate dimensions!')
 
         n_samples = X.shape[1]
-        mu_d, Sigma_d = np.empty((self.n_targets, n_samples)), np.empty((self.n_targets, n_samples))
+        mu_d, Sigma_d = np.zeros((self.n_targets, n_samples)), np.zeros((self.n_targets, n_samples))
         for ii in range(self.n_targets):
             # Remove useless state components
             if not self.ignore_state_components.any():
@@ -267,7 +257,10 @@ class GPRegressor:
             else:
                 X_use = np.delete(X, self.ignore_state_components[ii], axis=0)
 
-            mu_d[ii], Sigma_d[ii] = self.models[ii].predict(X_use.T, return_std=True)
+            for kk in range(n_samples):
+                mu_d[ii, kk], Sigma_d[ii, kk] = self.models[ii].predict(np.expand_dims(X_use[:, kk], axis=0), return_cov=True)
+            # mu_d[ii], full_cov = self.models[ii].predict(X_use.T, return_cov=True)
+            # Sigma_d[ii] = full_cov.diagonal()
 
         # Add prior mean function back
         if self.prior:
@@ -277,9 +270,8 @@ class GPRegressor:
 
         # Normalize quaternion
         Y_pred[3:7] = Y_pred[3:7] / la.norm(Y_pred[3:7], axis=0)
-        # if self.sys_rep == 'discrete':
 
-        return Y_pred, Sigma_d ** 2  # Square because Sigma_d is the standard deviation
+        return Y_pred, Sigma_d  # Square because Sigma_d is the standard deviation
 
     def predict_unc_prop(self, mu_k, Sigma_k):
         """
@@ -294,7 +286,7 @@ class GPRegressor:
         # Sigma_k = np.diag(np.diagonal(Sigma_k))  # Does not really make sense, should consider full covariance matrix
 
         n_samples = mu_k.shape[1]
-        mu_d, Sigma_d = np.empty((self.n_targets, 1)), np.empty((self.n_targets, 1))
+        mu_d, Sigma_d = np.zeros((self.n_targets, 1)), np.zeros((self.n_targets, self.n_targets))
         for ii in range(self.n_targets):
             # Remove useless state components
             if not self.ignore_state_components.any():
@@ -302,8 +294,8 @@ class GPRegressor:
             else:
                 X_use = np.delete(mu_k, self.ignore_state_components[ii], axis=0)
 
-            mu_d[ii], std_dev = self.models[ii].predict(X_use.T, return_std=True)
-            Sigma_d[ii] = std_dev ** 2
+            mu_d[ii], full_cov = self.models[ii].predict(X_use.T, return_cov=True)
+            Sigma_d[ii, ii] = full_cov.diagonal()
 
         # Add prior mean function back
         if self.prior:
@@ -315,6 +307,8 @@ class GPRegressor:
 
         # Appendix formulation
         grad_full = grad_proj(mu_k) + self.grad_mu(mu_k)
+        if np.min(np.diagonal(grad_full @ Sigma_k @ grad_full.T)) < 0:
+            pass
         Sigma_kp1 = Sigma_d + grad_full @ Sigma_k @ grad_full.T
 
         # # Propagate uncertainty (Hewing et al., 2018)
@@ -332,7 +326,7 @@ class GPRegressor:
         # ])
         # Sigma_kp1 = A @ B @ A.T
 
-        return mu_kp1, Sigma_kp1, Sigma_d
+        return mu_kp1, Sigma_kp1, Sigma_d.diagonal()
 
     def compute_grams(self):
         """
@@ -363,17 +357,20 @@ class GPRegressor:
 
             # Length scales
             l = kernel.k1.k2.length_scale
-            if not self.ignore_state_components.any():
-                self.L_inv.append(np.diag(1 / (l ** 2)))
+            if self.kernel_idx == 0:
+                self.L_inv.append(1 / (l ** 2))
             else:
-                # Set length scales of not considered state components to very high value
-                L_inv = np.zeros(self.n_features)
-                counter = 0
-                for kk in range(self.n_features):
-                    if kk not in self.ignore_state_components[ii]:
-                        L_inv[kk] = 1 / (l[counter] ** 2)
-                        counter += 1
-                self.L_inv.append(np.diag(L_inv))
+                if not self.ignore_state_components.any():
+                    self.L_inv.append(np.diag(1 / (l ** 2)))
+                else:
+                    # Set length scales of not considered state components to very high value
+                    L_inv = np.zeros(self.n_features)
+                    counter = 0
+                    for kk in range(self.n_features):
+                        if kk not in self.ignore_state_components[ii]:
+                            L_inv[kk] = 1 / (l[counter] ** 2)
+                            counter += 1
+                    self.L_inv.append(np.diag(L_inv))
 
             # Noise
             self.noise.append(kernel.k2.noise_level)
@@ -387,7 +384,10 @@ class GPRegressor:
         """
 
         # Compute gradient of \mu with respect to the x1
-        grad_k = - self.C[ii] * np.exp(-0.5 * (x1 - x2).T @ self.L_inv[ii] @ (x1 - x2)) * self.L_inv[ii] @ (x1 - x2)
+        if self.kernel_idx == 0:
+            grad_k = - self.C[ii] * np.exp(-0.5 * (x1 - x2).T * self.L_inv[ii] @ (x1 - x2)) * self.L_inv[ii] * (x1 - x2)
+        elif self.kernel_idx == 1:
+            grad_k = - self.C[ii] * np.exp(-0.5 * (x1 - x2).T @ self.L_inv[ii] @ (x1 - x2)) * self.L_inv[ii] @ (x1 - x2)
         # k = self.models[ii].kernel_(np.concatenate((x1.T, x2.T), axis=0))[0, 1]
         # grad_k = - k * la.inv(self.L_inv[ii]) @ (x1 - x2)
         return grad_k.reshape(grad_k.shape[0])
@@ -411,7 +411,11 @@ class GPRegressor:
             grad_K = np.zeros((n_train, self.n_features))
             for kk in range(n_train):
                 grad_K[kk, :] = self.grad_k(x, self.X_train[:, kk].reshape(self.n_features, 1), ii)
+                if grad_K.max() > 10:
+                    pass
             # grad_mu[ii, :] = grad_K @ la.inv(self.K[ii] + np.eye(self.K[ii].shape[0]) * self.noise[ii]) @ self.Y_train[ii, :].T
             grad_mu[ii, :] = self.Y_train[ii, :] @ self.K_inv[ii] @ grad_K
+            if grad_mu.max() > 10:
+                pass
 
         return grad_mu

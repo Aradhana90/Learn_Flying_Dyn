@@ -276,7 +276,35 @@ def rotate_trajectories_to_plane(x, T_vec):
             x_rot[13:16, sum(T_vec[0:ii]) + kk] = R @ x_tmp[13:16, kk]  # \dot{v}
             x_rot[16:19, sum(T_vec[0:ii]) + kk] = R @ x_tmp[16:19, kk]  # \dot{\omega}
 
-        # Shift trajectory such that the y = 0 for the initial position
+        # Shift trajectory such that the x = 0 and y = 0 for the initial position
+        x_rot[0, sum(T_vec[0:ii]): sum(T_vec[0:ii]) + T_vec[ii]] -= x_rot[0, sum(T_vec[0:ii])]
         x_rot[1, sum(T_vec[0:ii]): sum(T_vec[0:ii]) + T_vec[ii]] -= x_rot[1, sum(T_vec[0:ii])]
 
     return x_rot
+
+
+def sample_random_states(cont=True, n_samples=1000):
+    """
+    :param cont:
+    :param n_samples:
+    :return:            randomly samples states of shape (n_samples, 10) for cont=True or (n_samples, 13) for cont=False
+    """
+    o_rand_x = np.random.uniform(0, 2, size=(n_samples, 1))
+    o_rand_y = np.random.uniform(-0.1, 0.1, size=(n_samples, 1))
+    o_rand_z = np.random.uniform(0, 2, size=(n_samples, 1))
+    o_rand = np.concatenate((o_rand_x, o_rand_y, o_rand_z), axis=1)
+
+    q_rand = np.random.uniform(-1, 1, size=(n_samples, 4))
+    for ii in range(n_samples):
+        q_rand[ii] = q_rand[ii] / np.linalg.norm(q_rand[ii])
+
+    v_rand_x = np.random.uniform(1, 3, size=(n_samples, 1))
+    v_rand_y = np.random.uniform(-0.5, 0.5, size=(n_samples, 1))
+    v_rand_z = np.random.uniform(-5, 1, size=(n_samples, 1))
+    v_rand = np.concatenate((v_rand_x, v_rand_y, v_rand_z), axis=1)
+
+    omega_rand = np.random.uniform(-10, 10, size=(n_samples, 3))
+
+    x_rand = np.concatenate((o_rand, q_rand, v_rand, omega_rand), axis=1)
+
+    return x_rand

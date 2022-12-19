@@ -1,7 +1,5 @@
 import numpy as np
 
-from metrics import get_rmse
-
 
 def get_zrot(angle):
     """

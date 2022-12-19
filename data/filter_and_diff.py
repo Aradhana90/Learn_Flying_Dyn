@@ -167,7 +167,7 @@ if __name__ == "__main__":
         # Compare filtering and differentiation approaches
         t1, x1, ddxi1 = get_trajectory(path_tmp, filter_size=7, which_filter='mean', only_pos=pos_only,
                                        ang_vel=comp_ang_vel)
-        # x2, ddxi2 = rotate_trajectory(x1, ddxi1)
+        x1, ddxi1 = rotate_trajectory(x1, ddxi1)
         # t2, x2, ddxi2 = get_trajectory(path, which_filter='savgol')
 
         # fig = plt.figure()

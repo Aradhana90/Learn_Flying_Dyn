@@ -144,7 +144,8 @@ class GPRegressor:
             else:
                 X_use = np.delete(X, self.ignore_state_components[ii], axis=0)
 
-            Y_tmp[ii], sigma_pred[ii] = self.models[ii].predict(X_use.T, return_std=True)
+            Y_tmp[ii], full_cov = self.models[ii].predict(X_use.T, return_cov=True)
+            sigma_pred[ii] = full_cov.diagonal()
 
         # Add prior mean function back
         if self.prior:
