@@ -1,6 +1,7 @@
 import joblib
 import numpy as np
 import matplotlib.pyplot as plt
+import tikzplotlib
 from data.data_handler import DataHandler
 from eval.functions.metrics import integrate_trajectories_disc
 
@@ -8,14 +9,16 @@ np.set_printoptions(threshold=np.inf)
 np.set_printoptions(linewidth=np.inf)
 
 obj = 0
-path = ['../data/extracted/benchmark_box/small_dist', '../data/extracted/benchmark_box/med_dist', '../data/extracted/white_box/small_dist',
-        '../data/extracted/white_box/med_dist']
+path = ['../../data/extracted/benchmark_box/small_dist', '../../data/extracted/benchmark_box/med_dist', '../../data/extracted/white_box/small_dist',
+        '../../data/extracted/white_box/med_dist']
 n_traj = [20, 19, 18, 21]
-test_runs = [9]
+test_runs = [16]
 # test_runs = [13]
 
 if __name__ == "__main__":
-    model = joblib.load('./cross_validation_models/F_8/obj_0_kernel_0_run_0.sav')
+    model = joblib.load('../cross_valid_models_disc/obj_0/kernel_0/F_10/3/model.sav')
+    traj1 = joblib.load('../cross_valid_models_disc/obj_0/kernel_0/F_10/3/train_traj1.sav')
+    print(traj1)
     # model = joblib.load('./gp_models/obj_0_runs_1to4_kernel_0.sav')
     model.get_kernel_params()
     model.compute_grams()
@@ -27,7 +30,7 @@ if __name__ == "__main__":
         dh = DataHandler(dt=0.01, filter_size=7, cont_time=False, rot_to_plane=True)
         dh.add_trajectories(path[1], [test_runs[ii]], 'test')
 
-        # dh.T_vec[0] = 10  # DELETE
+        dh.T_vec[0] = 10  # DELETE
 
         # Integrate trajectories with uncertainty propagation
         X_int, Eul_int, Sigma_prop_int, Sigma_int = integrate_trajectories_disc(model, dh.X_test, dh.T_vec, unc_prop=True)
@@ -76,6 +79,8 @@ if __name__ == "__main__":
                                          alpha=0.2)
             axes[1, ii - 3].set_ylabel('$q_' + str(ii - 2) + '$')
 
+        # tikzplotlib.save("../../plot/tex_files/unc_prop_oq.tex")
+
         fig, axes = plt.subplots(2, 4)
         # Linear velocity
         for ii in range(7, 10):
@@ -92,6 +97,8 @@ if __name__ == "__main__":
             axes[1, ii - 10].fill_between(np.arange(traj_len), X_int[ii] - Sigma_prop_int[ii, ii], X_int[ii] + Sigma_prop_int[ii, ii], color='b',
                                           alpha=0.2)
             axes[1, ii - 10].set_ylabel('$\\omega_' + str(ii - 9) + '$')
+
+        # tikzplotlib.save("../../plot/tex_files/unc_prop_vw.tex")
 
     print(Sigma_prop_final)
     plt.show()

@@ -1,6 +1,7 @@
 import joblib
 import numpy as np
 import matplotlib.pyplot as plt
+import tikzplotlib
 from data.mechanics import sample_random_states
 
 cont = True
@@ -12,6 +13,7 @@ n_samples = 1000
 X_rand = sample_random_states(cont=cont, n_samples=n_samples)
 
 F_vec = [2, 4, 6, 8, 10, 14, 18, 22, 26, 30]
+# F_vec = [2, 4]
 
 Sigma_o = np.zeros((len(F_vec), N_CV))
 Sigma_q = np.zeros((len(F_vec), N_CV))
@@ -49,5 +51,7 @@ else:
     axes[0, 1].plot(F_vec, np.mean(Sigma_q, axis=1))
     axes[1, 0].plot(F_vec, np.mean(Sigma_v, axis=1))
     axes[1, 1].plot(F_vec, np.mean(Sigma_w, axis=1))
+
+tikzplotlib.save("matern.tex")
 
 plt.show()

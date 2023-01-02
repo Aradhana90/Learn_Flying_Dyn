@@ -1,0 +1,57 @@
+% This file was created with tikzplotlib v0.10.1.
+\begin{tikzpicture}
+
+\definecolor{darkgray176}{RGB}{176,176,176}
+\definecolor{steelblue31119180}{RGB}{31,119,180}
+
+\begin{groupplot}[group style={group size=2 by 1}]
+\nextgroupplot[
+tick align=outside,
+tick pos=left,
+x grid style={darkgray176},
+xmin=0.6, xmax=31.4,
+xtick style={color=black},
+y grid style={darkgray176},
+ymin=0.493792055344415, ymax=0.694820948488133,
+ytick style={color=black}
+]
+\addplot [semithick, steelblue31119180]
+table {%
+2 0.685683271527055
+4 0.669106501519313
+6 0.624683115674901
+8 0.624581607560985
+10 0.608657476900287
+14 0.561870375432786
+18 0.564906497133305
+22 0.529498893851747
+26 0.502929732305493
+30 0.505606428642611
+};
+
+\nextgroupplot[
+tick align=outside,
+tick pos=left,
+x grid style={darkgray176},
+xmin=0.6, xmax=31.4,
+xtick style={color=black},
+y grid style={darkgray176},
+ymin=5.60910373064057, ymax=11.0223414839433,
+ytick style={color=black}
+]
+\addplot [semithick, steelblue31119180]
+table {%
+2 10.7762852224295
+4 9.35073033083865
+6 9.32067425996327
+8 8.55103598463265
+10 8.68132486228633
+14 7.44359441326436
+18 6.73338103185884
+22 6.4438466774494
+26 5.85515999215433
+30 6.14205551210908
+};
+\end{groupplot}
+
+\end{tikzpicture}

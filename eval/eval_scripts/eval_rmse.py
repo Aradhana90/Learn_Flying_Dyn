@@ -1,6 +1,7 @@
 import joblib
 import numpy as np
 import matplotlib.pyplot as plt
+import tikzplotlib
 from data.data_handler import DataHandler
 from eval.functions.metrics import get_rmse, get_rmse_eul
 
@@ -8,10 +9,11 @@ from eval.functions.metrics import get_rmse, get_rmse_eul
 cont = True
 
 N_CV = 10
-obj = 0
-kernel_idx = 0
+obj = 1
+kernel_idx = 1
 
-F_vec = [2, 4, 6, 8, 10, 14, 18, 22, 26, 30]
+F_vec = [2, 4, 6, 8, 10, 14, 18]
+# F_vec = [2, 4]
 
 data_path = ['../../data/extracted/benchmark_box/small_dist', '../../data/extracted/benchmark_box/med_dist',
              '../../data/extracted/white_box/small_dist',
@@ -82,13 +84,15 @@ for ii in range(len(F_vec)):
 # Plot
 if cont:
     fig, axes = plt.subplots(1, 2)
-    axes[0].plot(F_vec, np.mean(rmse_dv, axis=1), label='$\\mathrm{RMSE}_{\\dot{v}}$')
-    axes[1].plot(F_vec, np.mean(rmse_dw, axis=1), label='$\\mathrm{RMSE}_{\\dot{\\omega}}$')
+    axes[0].plot([val / 40 for val in F_vec], np.mean(rmse_dv, axis=1), label='$\\mathrm{RMSE}_{\\dot{v}}$')
+    axes[1].plot([val / 40 for val in F_vec], np.mean(rmse_dw, axis=1), label='$\\mathrm{RMSE}_{\\dot{\\omega}}$')
 else:
     fig, axes = plt.subplots(2, 2)
-    axes[0, 0].plot(F_vec, np.mean(rmse_o, axis=1), label='$\\mathrm{RMSE}_{o}$')
-    axes[0, 1].plot(F_vec, np.mean(rmse_q, axis=1), label='$\\mathrm{RMSE}_{q}$')
-    axes[1, 0].plot(F_vec, np.mean(rmse_v, axis=1), label='$\\mathrm{RMSE}_{v}$')
-    axes[1, 1].plot(F_vec, np.mean(rmse_w, axis=1), label='$\\mathrm{RMSE}_{\\omega}$')
+    axes[0, 0].plot([val / 40 for val in F_vec], np.mean(rmse_o, axis=1), label='$\\mathrm{RMSE}_{o}$')
+    axes[0, 1].plot([val / 40 for val in F_vec], np.mean(rmse_q, axis=1), label='$\\mathrm{RMSE}_{q}$')
+    axes[1, 0].plot([val / 40 for val in F_vec], np.mean(rmse_v, axis=1), label='$\\mathrm{RMSE}_{v}$')
+    axes[1, 1].plot([val / 40 for val in F_vec], np.mean(rmse_w, axis=1), label='$\\mathrm{RMSE}_{\\omega}$')
+
+tikzplotlib.save("../../plot/tex_files/cont_obj" + str(obj) + "_kernel" + str(kernel_idx) + ".tex")
 
 plt.show()

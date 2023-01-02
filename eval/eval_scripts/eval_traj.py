@@ -1,6 +1,7 @@
 import joblib
 import numpy as np
 import matplotlib.pyplot as plt
+import tikzplotlib
 from data.data_handler import DataHandler
 from eval.functions.metrics import integrate_trajectories_disc, integrate_trajectories_cont, eul_norm
 
@@ -8,10 +9,10 @@ from eval.functions.metrics import integrate_trajectories_disc, integrate_trajec
 cont = True
 
 N_CV = 10
-obj = 0
-kernel_idx = 0
+obj = 1
+kernel_idx = 1
 
-F_vec = [2, 4, 6, 8, 10, 14, 18, 22, 26, 30]
+F_vec = [2, 4, 6, 8, 10, 14, 18]
 
 data_path = ['../../data/extracted/benchmark_box/small_dist', '../../data/extracted/benchmark_box/med_dist',
              '../../data/extracted/white_box/small_dist',
@@ -84,7 +85,9 @@ for ii in range(len(F_vec)):
 
 # Plot
 fig, axes = plt.subplots(1, 2)
-axes[0].errorbar(F_vec, np.mean(diff_pos, axis=1), np.mean(diff_pos_std, axis=1), label='$\\mathrm{diff_{pos}}$')
-axes[1].errorbar(F_vec, np.mean(diff_ori, axis=1), np.mean(diff_ori_std, axis=1), label='$\\mathrm{diff_{ori}}$')
+axes[0].plot(F_vec, np.mean(diff_pos, axis=1) * 100, label='$\\mathrm{diff_{pos}}$')
+axes[1].plot(F_vec, np.mean(diff_ori, axis=1), label='$\\mathrm{diff_{ori}}$')
+
+tikzplotlib.save("../../plot/tex_files/disc_obj" + str(obj) + "_kernel" + str(kernel_idx) + "_traj.tex")
 
 plt.show()
