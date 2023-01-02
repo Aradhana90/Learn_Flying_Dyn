@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from data.filter_and_diff import get_trajectories
 from data.mechanics import rotate_trajectories_to_plane, quat2eul
 
-obj = 0
+obj = 1
 
 # Specify which trajectories to use for training and testing
 if obj == 1:

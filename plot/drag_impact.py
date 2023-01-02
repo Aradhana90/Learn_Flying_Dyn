@@ -1,9 +1,12 @@
+import sys
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.linalg as la
+import tikzplotlib
 
 from data.filter_and_diff import get_trajectory, get_trajectories
-from eval.functions.metrics import get_rmse, integrate_trajectories_old, eul_norm
+from data.mechanics import quat2eul
+from eval.metrics import get_rmse, integrate_trajectories_old, eul_norm
 
 # Specify algorithm and system model
 alg = 'proj'

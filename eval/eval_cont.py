@@ -1,4 +1,3 @@
-import random
 import sys
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,55 +14,42 @@ alg = 'gpr'
 only_pos = False
 ang_vel = True
 prior = True
-kernel_index = 1
-N_cross_validation = 4
-split_ratio = 0.4
+kernel_indices = [1]
 obj = 0
 path = ['../data/extracted/benchmark_box/small_dist', '../data/extracted/benchmark_box/med_dist', '../data/extracted/white_box/small_dist',
         '../data/extracted/white_box/med_dist']
 n_traj = [20, 19, 18, 21]
-if obj == 0:
-    n_traj = n_traj[0:2]
-    path = path[0:2]
-else:
-    n_traj = n_traj[2:4]
-    path = path[2:4]
+
+# Specify which trajectories to use for training and testing
+training_runs = np.arange(1, 11)
+test_runs = []
+for ii in range(4):
+    test_runs.append(np.delete(np.arange(1, n_traj[ii] + 1), training_runs - 1))
 
 filter_size = 7
 
 if __name__ == "__main__":
-    rmse_pos = np.empty(N_cross_validation)
-    rmse_ori = np.empty(N_cross_validation)
-    diff_pos = np.empty(N_cross_validation)
-    diff_ori = np.empty(N_cross_validation)
+    # Training data
+    dh = DataHandler(dt=0.01, filter_size=7, cont_time=True, rot_to_plane=True)
+    if obj == 0:
+        dh.add_trajectories(path[0], training_runs, 'train')
+        dh.add_trajectories(path[0], test_runs[0], 'test')
+        dh.add_trajectories(path[1], training_runs, 'train')
+        dh.add_trajectories(path[1], test_runs[1], 'test')
+    else:
+        dh.add_trajectories(path[2], training_runs, 'train')
+        dh.add_trajectories(path[2], test_runs[2], 'test')
+        dh.add_trajectories(path[3], training_runs, 'train')
+        dh.add_trajectories(path[3], test_runs[3], 'test')
 
-    for k in range(N_cross_validation):
-        # Training data
-        dh = DataHandler(dt=0.01, filter_size=7, cont_time=True, rot_to_plane=True)
-
-        all_runs1 = np.arange(1, n_traj[0] + 1)
-        training_runs1 = np.sort(np.array(random.sample(list(all_runs1), int(split_ratio * 20))))
-        test_runs1 = all_runs1[~np.isin(all_runs1, training_runs1)]
-        all_runs2 = np.arange(1, n_traj[1] + 1)
-        training_runs2 = np.sort(np.array(random.sample(list(all_runs2), int(split_ratio * 20))))
-        test_runs2 = all_runs2[~np.isin(all_runs2, training_runs2)]
-
-        print('Training runs 1: ', training_runs1, ' Training runs 2: ', training_runs2)
-        print('Test runs 1: ', test_runs1, ' Test runs 2: ', test_runs2)
-
-        dh.add_trajectories(path[0], training_runs1, 'train')
-        dh.add_trajectories(path[0], test_runs1, 'test')
-        dh.add_trajectories(path[1], training_runs2, 'train')
-        dh.add_trajectories(path[1], test_runs2, 'test')
-
-        print('Created training and test data.')
-        # Train models and predict acceleration
-
+    print('Created training and test data.')
+    # Train models and predict acceleration
+    for k in range(len(kernel_indices)):
         models = []
         if alg == 'svr':
             model = SVRegressor(n_features=10, n_targets=6, kernel='rbf')
         elif alg == 'gpr':
-            model = GPRegressor(n_features=10, n_targets=6, prior=True, kernel_idx=kernel_index, n_restarts=4)
+            model = GPRegressor(n_features=10, n_targets=6, prior=True, kernel_idx=kernel_indices[k], n_restarts=4)
 
         if alg == 'proj':
             y_pred = np.zeros((6, dh.X_test.shape[1]))
@@ -77,28 +63,27 @@ if __name__ == "__main__":
         # Predict trajectories in the test set
         x_int, eul_int = integrate_trajectories_cont(model, x_test=dh.X_test, T_vec=dh.T_vec)
 
+        print(kernel_indices[k])
         # Compute RMSE
-        rmse_pos[k] = get_rmse(dh.Y_test[0:3], y_pred[0:3])
-        print(f"Fold {k:.0f}: RMSE in linear acceleration in m/s^2 is {rmse_pos[k]:.3f}.")
-        rmse_ori[k] = get_rmse(dh.Y_test[3:6], y_pred[3:6])
-        print(f"Fold {k:.0f}: RMSE in angular acceleration in  rad/s^2 is {rmse_ori[k]:.3f}.")
+        rmse_pos = get_rmse(dh.Y_test[0:3], y_pred[0:3])
+        print(f"RMSE in linear acceleration in m/s^2 is {rmse_pos:.3f}.")
+        if not only_pos:
+            rmse_ori = get_rmse(dh.Y_test[3:6], y_pred[3:6])
+            print(f"RMSE in angular acceleration in  rad/s^2 is {rmse_ori:.3f}.")
 
         # Compute deviation of predicted and real endpoint
-        diff_pos_tmp, diff_ori_tmp = np.zeros(len(dh.T_vec)), np.zeros(len(dh.T_vec))
+        diff_pos, diff_ori = np.zeros(len(dh.T_vec)), np.zeros(len(dh.T_vec))
         for ii in range(len(dh.T_vec)):
-            diff_pos_tmp[ii] = la.norm(dh.X_test[0:3, np.sum(dh.T_vec[:ii + 1]) - 1] - x_int[0:3, np.sum(dh.T_vec[:ii + 1]) - 1])
-            diff_ori_tmp[ii] = eul_norm(dh.Eul_test[:, np.sum(dh.T_vec[:ii + 1]) - 1], eul_int[:, np.sum(dh.T_vec[:ii + 1]) - 1])
-        # print("End position deviations in cm are: ", diff_pos_tmp * 100)
-        # print("End euler angle deviations in deg are: ", diff_ori_tmp)
-        diff_pos[k] = np.mean(diff_pos_tmp)
-        diff_ori[k] = np.mean(diff_ori_tmp)
-        print(f"Fold {k:.0f}: diff_pos is {diff_pos[k] * 100:.1f} +- {np.std(diff_pos_tmp) * 100:.1f} cm.")
-        print(f"Fold {k:.0f}: diff_ori is {diff_ori[k]:.1f} +- {np.std(diff_ori_tmp):.1f} deg.")
+            diff_pos[ii] = la.norm(dh.X_test[0:3, np.sum(dh.T_vec[:ii + 1]) - 1] - x_int[0:3, np.sum(dh.T_vec[:ii + 1]) - 1])
+        print("End position deviations in cm are: ", diff_pos * 100)
+        print(f"Mean is {np.mean(diff_pos) * 100:.1f} +- {np.std(diff_pos) * 100:.1f} cm.")
 
-    print(f"Total: RMSE in linear acceleration in m/s^2 is {np.mean(rmse_pos):.3f}.")
-    print(f"Total: RMSE in angular acceleration in  rad/s^2 is {np.mean(rmse_ori):.3f}.")
-    print(f"Total: diff_pos is {np.mean(diff_pos) * 100:.1f} +- {np.std(diff_pos) * 100:.1f} cm.")
-    print(f"Total: diff_ori is {np.mean(diff_ori):.1f} +- {np.std(diff_ori):.1f} deg.")
+        if not only_pos:
+            for ii in range(len(dh.T_vec)):
+                # dist_ori = la.norm(dh.X_test[3:7, T_test[0] - 1] - x_int[3:7, -1])
+                diff_ori[ii] = eul_norm(dh.Eul_test[:, np.sum(dh.T_vec[:ii + 1]) - 1], eul_int[:, np.sum(dh.T_vec[:ii + 1]) - 1])
+            print("End euler angle deviations in deg are: ", diff_ori)
+            print(f"Mean is: {np.mean(diff_ori):.1f} +- {np.std(diff_ori):.1f} deg.")
 
     # PLOT #############################################################################################################
     # Figure out dimensions
