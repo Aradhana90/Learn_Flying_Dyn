@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy.linalg as la
 import numpy as np
-from metrics import get_rmse, integrate_trajectory_old
-from learning.svr.SVR import train_svr, pred_svr
+from eval.functions.metrics import get_rmse, integrate_trajectory_old
+from trash.SVR import train_svr, pred_svr
 from data.filter_and_diff import get_trajectory
 
 # Specify which trajectories to use

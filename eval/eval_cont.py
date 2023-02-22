@@ -4,8 +4,7 @@ import numpy as np
 import numpy.linalg as la
 
 from data.data_handler import DataHandler
-from data.mechanics import quat2eul
-from metrics import get_rmse, integrate_trajectories_cont, eul_norm
+from eval.functions.metrics import get_rmse, integrate_trajectories_cont, eul_norm
 from learning.gpr.GPR_cont import GPRegressor
 from learning.svr.SVR_cont import SVRegressor
 

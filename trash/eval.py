@@ -4,10 +4,9 @@ import numpy as np
 import numpy.linalg as la
 
 from data.filter_and_diff import get_trajectory, get_trajectories
-from data.mechanics import quat2eul
 from metrics import get_rmse, integrate_trajectories_old, eul_norm
-from learning.gpr.GPR import train_gpr, pred_gpr
-from learning.svr.SVR import train_svr, pred_svr
+from trash.GPR import train_gpr, pred_gpr
+from trash.SVR import train_svr, pred_svr
 
 # Specify algorithm and system model
 alg = 'proj'

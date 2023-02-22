@@ -9,19 +9,20 @@ from data.mechanics import sub_prior
 class SVRegressor:
     dt = 0.01
     kernel = 'rbf'
-    ignore_state_components = np.array([[1, 2],
-                                        [0, 2],
-                                        [0, 1],
-                                        [0, 1, 2],
-                                        [0, 1, 2],
-                                        [0, 1, 2],
-                                        [0, 1, 2],
-                                        [0, 1, 2],
-                                        [0, 1, 2],
-                                        [0, 1, 2],
-                                        [0, 1, 2],
-                                        [0, 1, 2],
-                                        [0, 1, 2]], dtype=list)
+    # ignore_state_components = np.array([[1, 2],
+    #                                     [0, 2],
+    #                                     [0, 1],
+    #                                     [0, 1, 2],
+    #                                     [0, 1, 2],
+    #                                     [0, 1, 2],
+    #                                     [0, 1, 2],
+    #                                     [0, 1, 2],
+    #                                     [0, 1, 2],
+    #                                     [0, 1, 2],
+    #                                     [0, 1, 2],
+    #                                     [0, 1, 2],
+    #                                     [0, 1, 2]], dtype=list)
+    ignore_state_components = np.array([])
 
     def __init__(self, n_features, n_targets, kernel=kernel, prior=True):
         self.models = []
@@ -32,11 +33,10 @@ class SVRegressor:
 
     def train(self, X, Y):
         if self.prior:
-            Y_train = sub_prior(X, Y)
+            Y_train = sub_prior(X, Y, sys_rep='disc')
         else:
             Y_train = Y
 
-        # if self.sys_rep == 'discrete':
         t_total = time.time()
         for ii in range(self.n_targets):
             # Delete useless state components
@@ -77,7 +77,7 @@ class SVRegressor:
 
         # Add prior mean function back
         if self.prior:
-            Y_pred = sub_prior(X, Y_tmp, sub=False)
+            Y_pred = sub_prior(X, Y_tmp, sub=False, sys_rep='disc')
         else:
             Y_pred = Y_tmp
 

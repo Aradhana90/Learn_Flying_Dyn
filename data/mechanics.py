@@ -3,6 +3,33 @@ import math
 import numpy as np
 
 
+def sample_random_states(cont=True, n_samples=1000):
+    """
+    :param cont:
+    :param n_samples:
+    :return:            randomly samples states of shape (n_samples, 10) for cont=True or (n_samples, 13) for cont=False
+    """
+    o_rand_x = np.random.uniform(0, 2, size=(n_samples, 1))
+    o_rand_y = np.random.uniform(-0.1, 0.1, size=(n_samples, 1))
+    o_rand_z = np.random.uniform(0, 2, size=(n_samples, 1))
+    o_rand = np.concatenate((o_rand_x, o_rand_y, o_rand_z), axis=1)
+
+    q_rand = np.random.uniform(-1, 1, size=(n_samples, 4))
+    for ii in range(n_samples):
+        q_rand[ii] = q_rand[ii] / np.linalg.norm(q_rand[ii])
+
+    v_rand_x = np.random.uniform(1, 3, size=(n_samples, 1))
+    v_rand_y = np.random.uniform(-0.5, 0.5, size=(n_samples, 1))
+    v_rand_z = np.random.uniform(-5, 1, size=(n_samples, 1))
+    v_rand = np.concatenate((v_rand_x, v_rand_y, v_rand_z), axis=1)
+
+    omega_rand = np.random.uniform(-10, 10, size=(n_samples, 3))
+
+    x_rand = np.concatenate((o_rand, q_rand, v_rand, omega_rand), axis=1)
+
+    return x_rand
+
+
 def quat2mat(q):
     """
     :param q:   Quaternion of shape (4,)
@@ -133,6 +160,32 @@ def quat2eul(quat):
     return eul
 
 
+def eul2quat(eul):
+    """
+        :param eul:    Matrix of Euler angles of shape (4, n_samples)
+        :return:       Matrix of quaternions of shape (3, n_samples)
+        """
+    n_samples = eul.shape[1]
+    quat = np.empty((4, n_samples))
+
+    for ii in range(n_samples):
+        roll, pitch, yaw = eul[0, ii], eul[1, ii], eul[2, ii]
+
+        cr = np.cos(roll * 0.5)
+        sr = np.sin(roll * 0.5)
+        cp = np.cos(pitch * 0.5)
+        sp = np.sin(pitch * 0.5)
+        cy = np.cos(yaw * 0.5)
+        sy = np.sin(yaw * 0.5)
+
+        quat[0, ii] = cr * cp * cy + sr * sp * sy
+        quat[1, ii] = sr * cp * cy - cr * sp * sy
+        quat[2, ii] = cr * sp * cy + sr * cp * sy
+        quat[3, ii] = cr * cp * sy - sr * sp * cy
+
+    return quat
+
+
 def projectile_motion_disc(x):
     """
     :param x:   Current state of shape (13,)
@@ -250,7 +303,7 @@ def grad_proj(x, dt=0.01):
     return g
 
 
-def rotate_trajectories_to_plane(x, T_vec):
+def rotate_trajectories_to_plane(x, T_vec, rand_angle=False, normalize_x=False):
     """
     :param x:       States of shape (19, n_samples) consisting of position, orientation, linear and angular velocity and acceleration
     :param T_vec:   Length of the trajectories. Entries must sum up to n_samples
@@ -263,7 +316,10 @@ def rotate_trajectories_to_plane(x, T_vec):
         # Initial velocity
         v_init = x_tmp[7:10, 0]
         # Angle between horizontal projection of the initial velocity and the x-z-plane
-        phi = np.arctan2(v_init[1], v_init[0])
+        if not rand_angle:
+            phi = np.arctan2(v_init[1], v_init[0])
+        else:
+            phi = np.random.rand() * 2 * np.pi
         R, _ = get_zrot(-phi)
         q = np.array([np.cos(-phi / 2), 0, 0, np.sin(-phi / 2)], dtype=float)
 
@@ -278,5 +334,8 @@ def rotate_trajectories_to_plane(x, T_vec):
 
         # Shift trajectory such that the y = 0 for the initial position
         x_rot[1, sum(T_vec[0:ii]): sum(T_vec[0:ii]) + T_vec[ii]] -= x_rot[1, sum(T_vec[0:ii])]
+
+        if normalize_x:
+            x_rot[0, sum(T_vec[0:ii]): sum(T_vec[0:ii]) + T_vec[ii]] -= x_rot[0, sum(T_vec[0:ii])]
 
     return x_rot

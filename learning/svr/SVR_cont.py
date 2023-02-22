@@ -45,7 +45,7 @@ class SVRegressor:
             t0 = time.time()
             svr_model = GridSearchCV(
                 SVR(kernel=self.kernel, gamma=0.1),
-                param_grid={"C": [1e-2, 1e-1, 1e0, 1e1, 1e2, 1e3], "gamma": [1e-2, 1e-1, 1e0, 1e1]},
+                param_grid={"C": [1e-2, 1e-1, 1e0, 1e1], "gamma": [1e-2, 1e-1, 1e0]},
             )
             svr_model.fit(X_use.T, Y[ii].T)
             self.models.append(svr_model)

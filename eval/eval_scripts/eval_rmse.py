@@ -8,11 +8,16 @@ from eval.functions.metrics import get_rmse, get_rmse_eul
 # Continuous or discrete time
 cont = True
 
+# GP or SVR
+gp = True
+
 N_CV = 10
-obj = 1
+obj = 0
 kernel_idx = 1
 
-F_vec = [2, 4, 6, 8, 10, 14, 18]
+eval_on = 'train'
+
+F_vec = [2, 4, 6, 8, 10, 14, 18, 22, 26, 30]
 # F_vec = [2, 4]
 
 data_path = ['../../data/extracted/benchmark_box/small_dist', '../../data/extracted/benchmark_box/med_dist',
@@ -40,10 +45,17 @@ for ii in range(len(F_vec)):
     print(F)
     for kk in range(N_CV):
         # Get model
-        if cont:
-            model_path = '../cross_valid_models_cont/obj_' + str(obj) + '/kernel_' + str(kernel_idx) + '/F_' + str(F) + '/' + str(kk)
+        if gp:
+            if cont:
+                model_path = '../cross_valid_models_cont/obj_' + str(obj) + '/kernel_' + str(kernel_idx) + '/F_' + str(F) + '/' + str(kk)
+            else:
+                model_path = '../cross_valid_models_disc/obj_' + str(obj) + '/kernel_' + str(kernel_idx) + '/F_' + str(F) + '/' + str(kk)
         else:
-            model_path = '../cross_valid_models_disc/obj_' + str(obj) + '/kernel_' + str(kernel_idx) + '/F_' + str(F) + '/' + str(kk)
+            if cont:
+                model_path = '../cross_valid_models_cont_svr/obj_' + str(obj) + '/F_' + str(F) + '/' + str(kk)
+            else:
+                model_path = '../cross_valid_models_disc_svr/obj_' + str(obj) + '/F_' + str(F) + '/' + str(kk)
+
         model = joblib.load(model_path + '/model.sav')
 
         # Get test data
@@ -53,17 +65,24 @@ for ii in range(len(F_vec)):
         training_runs2 = joblib.load(model_path + '/train_traj2.sav')
 
         # Delete trajectories used for training from the test set
-        test_runs1 = np.arange(1, n_traj[0] + 1)
-        test_runs2 = np.arange(1, n_traj[1] + 1)
-        test_runs1 = np.delete(test_runs1, np.ravel([np.where(test_runs1 == i) for i in training_runs1]))
-        test_runs2 = np.delete(test_runs2, np.ravel([np.where(test_runs2 == i) for i in training_runs2]))
+        if eval_on == 'test':
+            test_runs1 = np.arange(1, n_traj[0] + 1)
+            test_runs2 = np.arange(1, n_traj[1] + 1)
+            test_runs1 = np.delete(test_runs1, np.ravel([np.where(test_runs1 == i) for i in training_runs1]))
+            test_runs2 = np.delete(test_runs2, np.ravel([np.where(test_runs2 == i) for i in training_runs2]))
+        else:
+            test_runs1 = training_runs1
+            test_runs2 = training_runs2
 
         print(test_runs1)
         dh.add_trajectories(data_path[0], test_runs1, 'test')
         dh.add_trajectories(data_path[1], test_runs2, 'test')
 
         # Predict
-        Y_pred, Sigma_pred = model.predict(dh.X_test)
+        if gp:
+            Y_pred, Sigma_pred = model.predict(dh.X_test)
+        else:
+            Y_pred = model.predict(dh.X_test)
 
         # Compute RMSE
         if cont:
@@ -84,15 +103,15 @@ for ii in range(len(F_vec)):
 # Plot
 if cont:
     fig, axes = plt.subplots(1, 2)
-    axes[0].plot([val / 40 for val in F_vec], np.mean(rmse_dv, axis=1), label='$\\mathrm{RMSE}_{\\dot{v}}$')
-    axes[1].plot([val / 40 for val in F_vec], np.mean(rmse_dw, axis=1), label='$\\mathrm{RMSE}_{\\dot{\\omega}}$')
+    axes[0].plot(F_vec, np.mean(rmse_dv, axis=1), label='$\\mathrm{RMSE}_{\\dot{v}}$')
+    axes[1].plot(F_vec, np.mean(rmse_dw, axis=1), label='$\\mathrm{RMSE}_{\\dot{\\omega}}$')
 else:
     fig, axes = plt.subplots(2, 2)
-    axes[0, 0].plot([val / 40 for val in F_vec], np.mean(rmse_o, axis=1), label='$\\mathrm{RMSE}_{o}$')
-    axes[0, 1].plot([val / 40 for val in F_vec], np.mean(rmse_q, axis=1), label='$\\mathrm{RMSE}_{q}$')
-    axes[1, 0].plot([val / 40 for val in F_vec], np.mean(rmse_v, axis=1), label='$\\mathrm{RMSE}_{v}$')
-    axes[1, 1].plot([val / 40 for val in F_vec], np.mean(rmse_w, axis=1), label='$\\mathrm{RMSE}_{\\omega}$')
+    axes[0, 0].plot(F_vec, np.mean(rmse_o, axis=1), label='$\\mathrm{RMSE}_{o}$')
+    axes[0, 1].plot(F_vec, np.mean(rmse_q, axis=1), label='$\\mathrm{RMSE}_{q}$')
+    axes[1, 0].plot(F_vec, np.mean(rmse_v, axis=1), label='$\\mathrm{RMSE}_{v}$')
+    axes[1, 1].plot(F_vec, np.mean(rmse_w, axis=1), label='$\\mathrm{RMSE}_{\\omega}$')
 
-tikzplotlib.save("../../plot/tex_files/cont_obj" + str(obj) + "_kernel" + str(kernel_idx) + ".tex")
+tikzplotlib.save("../../plot/tex_files/disc_obj" + str(obj) + "_svr.tex")
 
 plt.show()

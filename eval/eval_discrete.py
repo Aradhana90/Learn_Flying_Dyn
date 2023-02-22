@@ -2,12 +2,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import numpy.linalg as la
 import joblib
-from sklearn.gaussian_process.kernels import WhiteKernel, RBF, ConstantKernel, Matern
 
 from data.data_handler import DataHandler
 from learning.gpr.GPR_disc import GPRegressor
 from learning.svr.SVR_disc import SVRegressor
-from metrics import get_rmse, get_rmse_eul, eul_norm, integrate_trajectories_disc
+from eval.functions.metrics import get_rmse, get_rmse_eul, eul_norm, integrate_trajectories_disc
 
 # Specify algorithm and system model
 alg = 'gpr'

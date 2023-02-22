@@ -81,6 +81,22 @@ def get_kernels(idx=0):
                    ConstantKernel() * RBF() + ConstantKernel() * Matern() + WhiteKernel(),
                    ConstantKernel() * RBF() + ConstantKernel() * Matern() + WhiteKernel()
                    ]
+    elif idx == 8:
+        kernels = [ConstantKernel() * RBF(length_scale=np.ones(10), length_scale_bounds=(1e-1, 1e5)) + WhiteKernel(),
+                   ConstantKernel() * RBF(length_scale=np.ones(10), length_scale_bounds=(1e-1, 1e5)) + WhiteKernel(),
+                   ConstantKernel() * RBF(length_scale=np.ones(10), length_scale_bounds=(1e-1, 1e5)) + WhiteKernel(),
+                   ConstantKernel() * RBF(length_scale=np.ones(10), length_scale_bounds=(1e-1, 1e5)) + WhiteKernel(),
+                   ConstantKernel() * RBF(length_scale=np.ones(10), length_scale_bounds=(1e-1, 1e5)) + WhiteKernel(),
+                   ConstantKernel() * RBF(length_scale=np.ones(10), length_scale_bounds=(1e-1, 1e5)) + WhiteKernel()
+                   ]
+    elif idx == 9:
+        kernels = [ConstantKernel() * RBF(length_scale_bounds=(1e-1, 1e5)) + WhiteKernel(),
+                   ConstantKernel() * RBF(length_scale_bounds=(1e-1, 1e5)) + WhiteKernel(),
+                   ConstantKernel() * RBF(length_scale_bounds=(1e-1, 1e5)) + WhiteKernel(),
+                   ConstantKernel() * RBF(length_scale_bounds=(1e-1, 1e5)) + WhiteKernel(),
+                   ConstantKernel() * RBF(length_scale_bounds=(1e-1, 1e5)) + WhiteKernel(),
+                   ConstantKernel() * RBF(length_scale_bounds=(1e-1, 1e5)) + WhiteKernel()
+                   ]
 
     return kernels
 

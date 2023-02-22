@@ -8,11 +8,16 @@ from eval.functions.metrics import integrate_trajectories_disc, integrate_trajec
 # Continuous or discrete time
 cont = True
 
-N_CV = 10
-obj = 1
-kernel_idx = 1
+# GP or SVR
+gp = True
 
-F_vec = [2, 4, 6, 8, 10, 14, 18]
+N_CV = 10
+obj = 0
+kernel_idx = 9
+
+eval_on = 'test'
+
+F_vec = [10]
 
 data_path = ['../../data/extracted/benchmark_box/small_dist', '../../data/extracted/benchmark_box/med_dist',
              '../../data/extracted/white_box/small_dist',
@@ -35,10 +40,16 @@ for ii in range(len(F_vec)):
     for kk in range(N_CV):
         print(kk)
         # Get model
-        if cont:
-            model_path = '../cross_valid_models_cont/obj_' + str(obj) + '/kernel_' + str(kernel_idx) + '/F_' + str(F) + '/' + str(kk)
+        if gp:
+            if cont:
+                model_path = '../cross_valid_models_cont/obj_' + str(obj) + '/kernel_' + str(kernel_idx) + '/F_' + str(F) + '/' + str(kk)
+            else:
+                model_path = '../cross_valid_models_disc/obj_' + str(obj) + '/kernel_' + str(kernel_idx) + '/F_' + str(F) + '/' + str(kk)
         else:
-            model_path = '../cross_valid_models_disc/obj_' + str(obj) + '/kernel_' + str(kernel_idx) + '/F_' + str(F) + '/' + str(kk)
+            if cont:
+                model_path = '../cross_valid_models_cont_svr/obj_' + str(obj) + '/F_' + str(F) + '/' + str(kk)
+            else:
+                model_path = '../cross_valid_models_disc_svr/obj_' + str(obj) + '/F_' + str(F) + '/' + str(kk)
         model = joblib.load(model_path + '/model.sav')
 
         # Get test data
@@ -48,10 +59,14 @@ for ii in range(len(F_vec)):
         training_runs2 = joblib.load(model_path + '/train_traj2.sav')
 
         # Delete trajectories used for training from the test set
-        test_runs1 = np.arange(1, n_traj[0] + 1)
-        test_runs2 = np.arange(1, n_traj[1] + 1)
-        test_runs1 = np.delete(test_runs1, np.ravel([np.where(test_runs1 == i) for i in training_runs1]))
-        test_runs2 = np.delete(test_runs2, np.ravel([np.where(test_runs2 == i) for i in training_runs2]))
+        if eval_on == 'test':
+            test_runs1 = np.arange(1, n_traj[0] + 1)
+            test_runs2 = np.arange(1, n_traj[1] + 1)
+            test_runs1 = np.delete(test_runs1, np.ravel([np.where(test_runs1 == i) for i in training_runs1]))
+            test_runs2 = np.delete(test_runs2, np.ravel([np.where(test_runs2 == i) for i in training_runs2]))
+        else:
+            test_runs1 = training_runs1
+            test_runs2 = training_runs2
 
         print(test_runs1)
         dh.add_trajectories(data_path[0], test_runs1, 'test')
@@ -85,9 +100,14 @@ for ii in range(len(F_vec)):
 
 # Plot
 fig, axes = plt.subplots(1, 2)
+# Standard deviations
+print(np.mean(diff_pos, axis=1) * 100)
+print(np.std(diff_pos, axis=1) * 100)
+print(np.mean(diff_ori, axis=1))
+print(np.std(diff_ori, axis=1))
 axes[0].plot(F_vec, np.mean(diff_pos, axis=1) * 100, label='$\\mathrm{diff_{pos}}$')
 axes[1].plot(F_vec, np.mean(diff_ori, axis=1), label='$\\mathrm{diff_{ori}}$')
 
-tikzplotlib.save("../../plot/tex_files/disc_obj" + str(obj) + "_kernel" + str(kernel_idx) + "_traj.tex")
+# tikzplotlib.save("../../plot/tex_files/disc_obj" + str(obj) + "_svr_traj.tex")
 
-plt.show()
+# plt.show()

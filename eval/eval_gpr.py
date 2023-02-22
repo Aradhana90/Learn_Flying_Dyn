@@ -2,10 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import numpy.linalg as la
 
-from learning.gpr.GPR import train_gpr, pred_gpr
+from trash.GPR import train_gpr, pred_gpr
 from sklearn.gaussian_process.kernels import RBF, WhiteKernel
 from data.filter_and_diff import get_trajectory
-from metrics import get_rmse, integrate_trajectory_old
+from eval.functions.metrics import get_rmse, integrate_trajectory_old
 
 # Specify which trajectories to use
 which_object = 'white_box'

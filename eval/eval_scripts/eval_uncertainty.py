@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import tikzplotlib
 from data.mechanics import sample_random_states
+from data.data_handler import DataHandler
 
 cont = True
 
@@ -12,8 +13,25 @@ kernel_idx = 0
 n_samples = 1000
 X_rand = sample_random_states(cont=cont, n_samples=n_samples)
 
-F_vec = [2, 4, 6, 8, 10, 14, 18, 22, 26, 30]
-# F_vec = [2, 4]
+# Get all data points
+data_path_all = ['../data/extracted/benchmark_box/small_dist', '../data/extracted/benchmark_box/med_dist', '../data/extracted/white_box/small_dist',
+                 '../data/extracted/white_box/med_dist']
+n_traj_all = [20, 19, 18, 21]
+if obj == 0:
+    n_traj = n_traj_all[0:2]
+    data_path = data_path_all[0:2]
+else:
+    n_traj = n_traj_all[2:4]
+    data_path = data_path_all[2:4]
+dh = DataHandler(dt=0.01, filter_size=7, cont_time=cont, rot_to_plane=True)
+dh.add_trajectories(data_path[0], np.arange(1, n_traj[0] + 1), 'train')
+dh.add_trajectories(data_path[1], np.arange(1, n_traj[1] + 1), 'train')
+
+# Replace certain components of the random samples by the average of the training data
+X_rand[3:-1]
+
+# F_vec = [2, 4, 6, 8, 10, 14, 18, 22, 26, 30]
+F_vec = [30]
 
 Sigma_o = np.zeros((len(F_vec), N_CV))
 Sigma_q = np.zeros((len(F_vec), N_CV))
