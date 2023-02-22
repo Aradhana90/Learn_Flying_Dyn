@@ -7,7 +7,7 @@ This project aims at learning the dynamics of free-flying objects from recorded 
 3. Apply filtering and numerical differentiation with the functions in data/filter_and_diff.py. This is done automatically by the Data_Handler class.
 
 # Training
-1. Run eval/train_many.py. Here, you can select SVR or GPR, continuous-time or discrete-time, the number of training trajectories, the number of cross-validations and the used kernel function.
+1. Run eval/train_many.py. Here, you can select SVR or GPR, continuous-time or discrete-time, the number of training trajectories, the number of cross-validations and the used kernel function. The trained models are then stored to be later used for evaluation.
 
 # Evaluation
 There are different scripts to evaluate the performance using different metrics. In the scripts, you can select between GPR/SVR and CT/DT.
