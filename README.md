@@ -10,13 +10,19 @@ This project aims at learning the dynamics of free-flying objects from recorded 
 1. Run eval/train_many.py. Here, you can select SVR or GPR, continuous-time or discrete-time, the number of training trajectories, the number of cross-validations and the used kernel function.
 
 # Evaluation
-1. Run either eval/eval_cont.py or eval/eval_discrete.py depending on whether the continuous-time or discrete-time case is considered. 
+There are different scripts to evaluate the performance using different metrics. In the scripts, you can select between GPR/SVR and CT/DT.
+- RMSE: Run eval/eval_scripts/eval_rmse.py
+- Final position and orientation error: Run eval/eval_scripts/eval_traj.py
+- Uncertainty propagation: Run eval/eval_scripts/uncertainty_propagation.py
 
 Shown below is the deviation of the final position and orientation for the continuous-time prediction model for different numbers of training trajectories.
 ![plot](/plot/pred_error_cont.JPG)
 
 Shown below is the result of approximate uncertainty propagation with the discrete-time prediction model and GPR.
 ![plot](/plot/unc_prop.JPG)
+
+Shown below is the result of applying approximate uncertainty propagation with many different initial throwing velocities. This is done in order to obtain the most reliable throwing configuration.
+![plot](/plot/configurations_uncertainty.JPG)
 
 # Other 
 - The learning algorithms are implemented as classes in learning/gpr and learning/svr. The uncertainty propagation scheme is implemented in learning/gpr/GPR_disc.py.
