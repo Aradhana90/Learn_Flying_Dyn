@@ -11,8 +11,12 @@ This project aims at learning the dynamics of free-flying objects from recorded 
 
 # Evaluation
 1. Run either eval/eval_cont.py or eval/eval_discrete.py depending on whether the continuous-time or discrete-time case is considered. 
-![Alt text](plot/pred_error_cont.JPG?raw=true "Deviation of the final position and orientation in the continuous-time case for different numbers of training trajectories")
+
+Shown below is the deviation of the final position and orientation for the continuous-time prediction model for different numbers of training trajectories.
 ![plot](/plot/pred_error_cont.JPG)
+
+Shown below is the result of approximate uncertainty propagation with the discrete-time prediction model and GPR.
+![plot](/plot/unc_prop.JPG)
 
 # Other 
 - The learning algorithms are implemented as classes in learning/gpr and learning/svr. The uncertainty propagation scheme is implemented in learning/gpr/GPR_disc.py.
