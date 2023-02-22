@@ -22,7 +22,7 @@ Shown below is the result of approximate uncertainty propagation with the discre
 ![plot](/plot/unc_prop.JPG)
 
 Shown below is the result of applying approximate uncertainty propagation with many different initial throwing velocities. This is done in order to obtain the most reliable throwing configuration.
-![plot](/plot/configurations_uncertainty.JPG width="100")
+![plot](/plot/configurations_uncertainty.JPG)
 
 # Other 
 - The learning algorithms are implemented as classes in learning/gpr and learning/svr. The uncertainty propagation scheme is implemented in learning/gpr/GPR_disc.py.
